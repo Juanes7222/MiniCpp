@@ -142,7 +142,7 @@ class Parser(sly.Parser):
         while_stmt ::= WHILE '(' expr ')' stmt
         '''
 
-    @_("FOR '(' for_init_stmt [ expr ] ';' [ expr ] ')' stmt")
+    @_("FOR '(' for_init_stmt ';' [ expr ] ';' [ expr ] ')' stmt")
     def for_stmt(self, p):
         """for_stmt ::= 'FOR' '(' for_init_stmt expr? ';' expr? ')' stmt"""
 

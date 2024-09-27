@@ -1,0 +1,35 @@
+/* ******************************************************* *
+ *                                                         *
+ * HOLA MUNDO                                              *
+ *                                                         *
+ ***********************************************************
+ */
+
+ class MyClass{
+  private: 
+    int edad;
+  
+  public:
+    int hola(int a){
+      int h = 1;
+      return a + h;
+    }
+ }
+
+ void main(void) {
+    // Imprimimos una cadena
+    int i;
+    float pi;
+
+    i = 10;
+    pi = 3.1415;
+
+    printf("Hola Clase");
+    if {
+      float e = 10.5;
+    } else{
+      printf("hola")
+    }
+    // Salimos del programa, retornando 0=Ok
+    return 0;
+ }

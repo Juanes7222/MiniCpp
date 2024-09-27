@@ -74,6 +74,62 @@ class Statement(Node):
 class Expression(Node):
     pass
 
+@dataclass
+class VarAssignmentExpr(Expression):
+    var: str
+    expr: Expression
+
+@dataclass
+class ExprStmt(Statement):
+    expr: Expression
+
+@dataclass
+class IfStmt(Statement):
+    condition: Expression
+    then_brach: Statement
+    else_branch: Union[Statement, None]
+
+@dataclass
+class WhileStmt(Statement):
+    condition: Expression
+    body: Statement
+
+@dataclass
+class ForStmt(Statement):
+    for_init_stament: Union[VarAssignmentExpr, ExprStmt]
+    condition: Expression
+    step: Expression
+    body: Statement
+
+@dataclass
+class BrakeStmt(Statement):
+    pass
+
+@dataclass
+class ReturnStmt(Statement):
+    expr: Union[Expression, None]
+
+@dataclass
+class FunctDecltmt(Statement):
+    name: str
+    params: list
+    body: Statement
+
+@dataclass
+class StaticVarDeclStmt(Statement):
+    var_name: str
+    var_type: str
+    
+@dataclass
+class ClassMemberStmt(Statement):
+    access_specifier: str
+    body: Union[FunctDecltmt, VarAssignmentExpr]
+
+@dataclass 
+class ClassDeclStmt(Statement):
+    name: str
+    class_member: ClassMemberStmt
+
 # =====================================================================
 # Clases Concretas
 # =====================================================================
@@ -94,3 +150,37 @@ class VarAssignmentExpr(Expression):
 class UnaryOpExpr(Expression):
     opr  : str
     expr : Expression
+
+@dataclass
+class BinaryOpExpr(Expression):
+    opr: str
+    left: Expression
+    right: Expression
+
+@dataclass
+class NewArrayExpr(Expression):
+    array_type: str
+    size_expr: Expression
+
+@dataclass
+class CallExpr(Expression):
+    func_name: str
+    args: list 
+
+@dataclass
+class VarExpr(Expression):
+    name: str
+
+@dataclass
+class ArrayAssignmentExpr(Expression):
+    array: str
+    index: Expression
+    expr: Expression
+
+@dataclass
+class IntToFloatExpr(Expression):
+    expr: Expression
+
+@dataclass
+class ArraySizeExpr(Expression):
+    array: str
