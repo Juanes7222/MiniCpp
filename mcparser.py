@@ -3,6 +3,9 @@
 Analizador Sintactico (LALR)
 '''
 from rich import print
+from mccast import (VarAssignmentExpr, ExprStmt, NullStmt, VarDeclStmt, FunctDecltmt, StaticVarDeclStmt, CompoundStmt, NewArrayExpr, ConstExpr, ReturnStmt, BreakStmt, 
+                    BinaryOpExpr, UnaryOpExpr, ArrayAssignmentExpr, VarExpr, ArrayLoockupExpr, CallExpr, IfStmt, ForStmt, WhileStmt, ArrayDeclStmt, Program, RenderTree,
+                    ArraySizeExpr)
 import sly
 
 from mclex import Lexer
@@ -30,135 +33,115 @@ class Parser(sly.Parser):
 
     @_("{ decl }")
     def program(self, p):
-        '''
-        program ::= decl+
-        '''
+        return Program(p.decl)
     
-    @_("var_decl", "func_decl", "class_decl")
+    @_("var_decl")
     def decl(self, p):
-        '''
-        decl ::= var_decl | func_decl | class_decl
-        '''
+        return p.var_decl
+
+    @_("func_decl")
+    def decl(self, p):
+        return p.func_decl
+
+    @_("class_decl")
+    def decl(self, p):
+        return p.class_decl
 
     @_("type_spec IDENT ';'")
     def var_decl(self, p):
-        '''
-        var_decl ::=  type_spec IDENT ';'
-        '''
+        return StaticVarDeclStmt(p.IDENT, p.type_spec)
 
-    @_("type_spec IDENT '[' ']' ';'")
+    @_("type_spec IDENT '[' expr ']' ';'")
     def var_decl(self, p):
-        '''
-        var_decl ::=  type_spec IDENT '[' ']' ';'
-        '''
+        return NewArrayExpr(p.type_spec, p.IDENT, p.expr)
 
     @_("VOID", "BOOL", "INT", "FLOAT", "CHAR")
     def type_spec(self, p):
-        '''
-        type_spec ::= VOID | BOOL  | INT | FLOAT | CHAR
-        '''
+        return p[0]
 
     @_("type_spec IDENT '(' params ')' compound_stmt")
     def func_decl(self, p):
-        '''
-        func_decl ::= type_spec IDENT '(' params ')' compound_stmt
-        '''
+        return FunctDecltmt(p.type_spec, p.IDENT, p.compund_stmt, p.params)
 
-    @_("param_list", "VOID")
+    @_("param_list")
     def params(self, p):
-        '''
-        params ::= param_list | VOID
-        '''
+        return p.param_list
 
-    @_("param { ',' param }")
+    @_("VOID")
+    def params(self, p):
+        return NullStmt()
+
+    @_("param")
     def param_list(self, p):
-        '''
-        param_list ::= param ( ',' param )*
-        '''
+        return [p.param] 
+
+    @_("param_list ',' param")
+    def param_list(self, p):
+        return p.param_list + [p.param] 
 
     @_("type_spec IDENT")
     def param(self, p):
-        '''
-        param ::= type_spec IDENT
-        '''
+        return VarDeclStmt(p.IDENT, p.type_spec, False)
 
     @_("type_spec IDENT '[' ']'")
     def param(self, p):
-        '''
-        param ::= type_spec IDENT '[' ']'
-        '''
+        return VarDeclStmt(p.IDENT, p.type_spec, True)
 
     @_("'{' local_decls stmt_list '}'")
     def compound_stmt(self, p):
-        '''
-        compound_stmt ::= '{' local_decls stmt_list '}'
-        '''
+        return CompoundStmt(p.local_decls, p.stmt_list)
     
-    @_("local_decl", "empty")
+    @_("local_decl")
     def local_decls(self, p):
-        '''
-        local_decls ::= local_decl |
-        '''
+        return [p.local_decl]
+    
+    @_("empty")
+    def local_decls(self, p):
+        return []
 
     @_("type_spec IDENT ';'")
     def local_decl(self, p):
-        '''
-        local_decl ::= type_spec IDENT ';'
-        '''
+        return VarDeclStmt(p.IDENT, p.type_spec)
 
     @_("type_spec IDENT '[' ']' ';'")
     def local_decl(self, p):
-        '''
-        local_decl ::= type_spec IDENT '[' ']' ';'
-        '''
+        return ArrayDeclStmt(p.IDENT, p.type_spec)
 
     @_("{ stmt }")
     def stmt_list(self, p):
-        '''
-        stmt_list ::= stmt*
-        '''
+        return p.stmt
 
     @_("expr_stmt", "compound_stmt", "if_stmt", "while_stmt", "return_stmt", "break_stmt", "for_stmt")
     def stmt(self, p):
-        '''
-        stmt ::= expr_stmt | compound_stmt | if_stmt | while_stmt | return_stmt | break_stmt | for_stmt
-        '''
+        return p[0]
 
     @_("expr ';'")
     def expr_stmt(self, p):
-        '''
-        expr_stmt ::= expr ';'
-        '''
+        return ExprStmt(p.expr)
 
     @_("';'")
     def expr_stmt(self, p):
-        '''
-        expr_stmt ::= ';'
-        '''
+        return NullStmt()
 
     @_("WHILE '(' expr ')' stmt")
     def while_stmt(self, p):
-        '''
-        while_stmt ::= WHILE '(' expr ')' stmt
-        '''
+        return WhileStmt(p.expr, p.stmt)
 
     @_("FOR '(' for_init_stmt ';' [ expr ] ';' [ expr ] ')' stmt")
     def for_stmt(self, p):
-        """for_stmt ::= 'FOR' '(' for_init_stmt expr? ';' expr? ')' stmt"""
+        return ForStmt(p.for_init_stmt, p.expr0, p.expr1, p.stmt)
 
     @_("var_decl")
     def for_init_stmt(self, p):
-        """for_init_stmt ::= var_decl"""
+        return p.var_decl
 
     @_("expr_stmt")
     def for_init_stmt(self, p):
-        """for_init_stmt ::= expr_stmt"""
+        return p.expr_stmt
 
     @_("IF '(' expr ')' stmt ELSE stmt")
     def if_stmt(self, p):
-        '''
-        if_stmt ::= IF '(' expr ')' stmt ( ELSE stmt )?
-        '''
+        return IfStmt(p.expr, p.stmt0, p.stmt1)
 
     # @_("IF '(' expr ')' stmt")
     # def if_stmt(self, p):
@@ -168,28 +151,24 @@ class Parser(sly.Parser):
 
     @_("RETURN [ expr ] ';'")
     def return_stmt(self, p):
-        '''
-        return_stmt ::= RETURN expr? ';'
-        '''
+        return ReturnStmt(p.expr)
 
-    @_("BREAK ';'", "CONTINUE ';'")
+    @_("BREAK ';'")
     def break_stmt(self, p):
-        '''
-        break_stmt ::= ( BREAK | CONTINUE ) ';'
-        '''
+        return BreakStmt()
+
+    @_("CONTINUE ';'")
+    def break_stmt(self, p):
+        return BreakStmt()
 
 
     @_("IDENT '=' expr")
     def expr(self, p):
-        '''
-        expr ::= IDENT '=' expr
-        '''
+        return VarAssignmentExpr(p.IDENT, p.expr)
 
     @_("IDENT '[' expr ']' '=' expr")
     def expr(self, p):
-        '''
-        expr ::= IDENT '[' expr ']' '=' expr
-        '''
+        return ArrayAssignmentExpr(p.IDENT, p.expr0, p.expr1)
 
     @_("expr OR expr",
        "expr AND expr",
@@ -206,74 +185,55 @@ class Parser(sly.Parser):
        "expr '/' expr",
        "expr '%' expr")
     def expr(self, p):
-        '''
-        expr ::=  expr 'OR' expr
-            | expr 'AND' expr
-            | expr 'EQ' expr | expr 'NE' expr
-            | expr 'LE' expr | expr '<' expr | expr 'GE' expr | expr '>' expr
-            | expr '+' expr | expr '-' expr
-            | expr '*' expr | expr '/' expr | expr '%' expr
-        '''
+        return BinaryOpExpr(p[1], p.expr0, p.expr1)
 
     @_("'!' expr", "'-' expr %prec UMINUS", "'+' expr %prec UMINUS")
     def expr(self, p):
-        '''
-        expr ::= '!' expr | '-' expr | '+' expr
-        '''
+        return UnaryOpExpr(p[0], p.expr)
 
     @_("'(' expr ')'")
     def expr(self, p):
-        '''
-        expr ::= '(' expr ')'
-        '''
+        return p.expr
 
     @_("IDENT")
     def expr(self, p):
-        '''
-        expr ::= IDENT
-        '''
+        return VarExpr(p.IDENT)
 
     @_("IDENT '[' expr ']'")
     def expr(self, p):
-        '''
-        expr ::= IDENT '[' expr ']'
-        '''
+        return ArrayLoockupExpr(p.IDENT, p.expr)
 
     @_("IDENT '(' args ')'")
     def expr(self, p):
-        '''
-        expr ::= IDENT '(' args ')'
-        '''
+        return CallExpr(p.IDENT, p.args)
 
     # @_("IDENT '.' SIZE")
     # def expr(self, p):
-    #     '''
-    #     expr ::= IDENT '.' SIZE
-    #     '''
+    #     return ArraySizeExpr(p.IDENT)
 
     @_("BOOL_LIT", "INT_LIT", "FLOAT_LIT", "STRING", "CHAR_LIT")
     def expr(self, p):
-        '''
-        expr ::= BOOL_LIT | INT_LIT | FLOAT_LIT | STRING
-        '''
+        return ConstExpr(p[0])
 
     @_("NEW type_spec '[' expr ']'")
     def expr(self, p):
-        '''
-        expr ::= NEW type_spec '[' expr ']'
-        '''
+        return NewArrayExpr(p.type_spec, p.expr)
 
-    @_("arg_list", "empty")
+    @_("arg_list")
     def args(self, p):
-        '''
-        args ::= arg_list |
-        ''' 
+        return p.arg_list 
+    
+    @_("empty")
+    def args(self, p):
+        return []
 
-    @_("expr [ ',' expr ]")
+    @_("arg_list ',' expr")
     def arg_list(self, p):
-        '''
-        arg_list ::= expr ( ',' expr )*
-        '''
+        return p.arg_list + [p.expr]
+    
+    @_("expr")
+    def arg_list(self, p):
+        return [p.expr]
 
     @_("CLASS IDENT '{' class_body '}' ';'")
     def class_decl(self, p):
@@ -330,14 +290,10 @@ def parse(source):
     lex = Lexer()
     pas = Parser()
 
-    pas.parse(lex.tokenize(source))
+    ast = pas.parse(lex.tokenize(source))
+    render_tree = RenderTree()
+    render_tree.render(ast)
 
 if __name__ == '__main__':
-    import sys
-
-    if len(sys.argv) != 2:
-        print(f"Usage mclex.py textfile")
-        exit(1)
-
     # parse(open(sys.argv[1], encoding='utf-8').read())
     parse(open("hola.mcc", encoding='utf-8').read())

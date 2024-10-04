@@ -30,7 +30,7 @@ class Lexer(sly.Lexer):
         self.lineno += t.value.count('\n')
 
     # Ignorar Comentarios
-    @_(r'//.*$')
+    @_(r'//.*')
     def ignore_cppcomment(self, t):
         self.lineno += 1
 
@@ -45,6 +45,7 @@ class Lexer(sly.Lexer):
     IDENT["bool"] = "BOOL"
     IDENT["int"] = "INT"
     IDENT["float"] = "FLOAT"
+    IDENT["char"] = "CHAR"
     IDENT["if"] = "IF"
     IDENT["else"] = "ELSE"
     IDENT["for"] = "FOR"
@@ -88,6 +89,7 @@ class Lexer(sly.Lexer):
     @_(r'(0\d+)((\.\d+(e[-+]?\d+)?)|(e[-+]?\d+))')
     def malformed_fnumber(self, t):
         print(f"{self.lineno}: Literal de punto flotante '{t.value}' no sportado")
+        return None
 
     @_(r'(?<![\w.-])-?(?:0|[1-9][0-9]*)(?![\w.])')
     def INT_LIT(self, t):
@@ -97,8 +99,9 @@ class Lexer(sly.Lexer):
     @_(r'0\d+')
     def malformed_inumber(self, t):
         print(f"{self.lineno}: Literal entera '{t.value}' no sportado")
-
-    @_(r"\'\w\'")
+        return None
+    
+    @_(r"'[^']'")
     def CHAR_LIT(self, t):
         return t
 
@@ -123,24 +126,5 @@ def print_lexer(source):
     console.print(table)
 
 if __name__ == '__main__':
-    import sys
-
-    # l = Lexer()
-    # d = '''
-    # class MyClass {
-    #         private:
-    #             int secretVar;
-    #         public:
-    #             MyClass() {}
-    #             void myMethod() {
-    #                 float x = 1.0;
-    #                 printf("hola \\"mundo\\"")
-    #             }
-    #         protected:
-    #             void protectedMethod() {}
-    #     }
-    # '''
-    # for tok in l.tokenize(d):
-    #     print(tok)
     
     print_lexer(open("hola.mcc", encoding='utf-8').read())

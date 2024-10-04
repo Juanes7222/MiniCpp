@@ -5,17 +5,6 @@
  ***********************************************************
  */
 
- class MyClass{
-  private: 
-    int edad;
-  
-  public:
-    int hola(int a){
-      int h = 1;
-      return a + h;
-    }
- }
-
  void main(void) {
     // Imprimimos una cadena
     int i;
