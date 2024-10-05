@@ -12,9 +12,9 @@
 
     i = 10;
     pi = 3.1415;
-
+    float h;
     printf("Hola Clase");
-    if {
+    if(i == 10) {
       float e = 10.5;
     } else{
       printf("hola")

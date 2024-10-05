@@ -127,6 +127,16 @@ class StaticVarDeclStmt(Statement):
     ident: str
     type_: str
     
+@dataclass
+class ClassMemberStmt(Statement):
+    access_specifier: str
+    body: Union[FunctDecltmt, VarAssignmentExpr]
+
+@dataclass 
+class ClassDeclStmt(Statement):
+    name: str
+    class_member: ClassMemberStmt
+
 # =====================================================================
 # Clases Concretas
 # =====================================================================

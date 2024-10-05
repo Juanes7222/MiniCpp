@@ -24,26 +24,39 @@ class Parser(sly.Parser):
         ('left', '<', "LE", '>', "GE"),
         ('left', '+', '-'),
         ('left', '*', '/', '%'),
-        ('left', 'CHAR', 'FLOAT', 'INT', 'BOOL', 'VOID'),
+        ('left', 'CLASS', 'CHAR', 'FLOAT', 'INT', 'BOOL', 'VOID'),
         ('left', 'IDENT'),
         ('right', "UMINUS", "!"),
         ('right', 'ELSE')
     )
     # Definir las Reglas de la gramática
 
-    @_("{ decl }")
+    @_("decl decls")
     def program(self, p):
-        return Program(stmts=p.decl)
+        print("Program")
+        return Program(stmts=[p.decl] + p.decls)
+
+    @_("decl")
+    def decls(self, p):
+        print("decl")
+        return [p.decl]
+
+    @_("decl decls")
+    def decls(self, p):
+        print("Decls")
+        return [p.decl] + p.decls
 
     @_("var_decl")
     def decl(self, p):
-        print("var")
         return p.var_decl
 
     @_("func_decl")
     def decl(self, p):
-        print("func")
         return p.func_decl
+
+    @_("class_decl")
+    def decl(self, p):
+        return p.class_decl
 
     @_("type_spec IDENT ';'")
     def var_decl(self, p):
@@ -233,6 +246,51 @@ class Parser(sly.Parser):
     def arg_list(self, p):
         return [p.expr]
 
+    @_("CLASS IDENT '{' class_body '}' ';'")
+    def class_decl(self, p):
+        """class_decl ::= 'CLASS' 'IDENT' '{' class_body '}' ';'"""
+        return NullStmt()
+        
+
+    @_("{ class_member }")
+    def class_body(self, p):
+        """class_body ::= class_member*"""
+        return NullStmt()
+        
+
+    @_("access_specifier ':' { class_member_stmt }")
+    def class_member(self, p):
+        return NullStmt()
+
+    
+    @_("func_decl")
+    def class_member_stmt(self, p):
+        return NullStmt()
+        
+
+    @_("var_decl")
+    def class_member_stmt(self, p):
+        return NullStmt()
+
+
+    # @_("constructor_decl")
+    # def class_member(self, p):
+    #     """class_member ::= var_decl 
+    #     | func_decl 
+    #     | constructor_decl 
+    #     | destructor_decl 
+    #     | access_specifier ':' class_member*
+    #     """
+
+    # @_("IDENT '(' params ')' compound_stmt")
+    # def constructor_decl(self, p):
+    #     """constructor_decl ::= 'IDENT' '(' params ')' compound_stmt"""
+
+    @_("PRIVATE", 'PROTECTED', 'PUBLIC')
+    def access_specifier(self, p):
+        """access_specifier ::= 'PRIVATE' | 'PROTECTED' | 'PUBLIC'"""
+        return NullStmt()
+
     @_("")
     def empty(self, p):
         pass
@@ -246,9 +304,7 @@ def parse(source):
     lex = Lexer()
     pas = Parser()
 
-    tokens = lex.tokenize(source)
-    
-    ast = pas.parse(tokens)
+    ast = pas.parse(lex.tokenize(source))
     render_tree = RenderTree()
     render_tree.render(ast)
 

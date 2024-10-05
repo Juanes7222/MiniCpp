@@ -8,8 +8,8 @@ class Lexer(sly.Lexer):
 
     tokens = (
         # Palabras reservadas
-        "CHAR", "VOID", "BOOL", "INT", "FLOAT", "IF", "ELSE", "FOR", "WHILE",
-        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW",
+        "CHAR", "VOID", "BOOL", "INT", "FLOAT", "IF", "ELSE", "FOR", "WHILE", "CLASS",
+        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW", "PRIVATE", "PUBLIC", "PROTECTED",
 
         # Operadores de Relacion
         "AND", "OR", "EQ", "NE", "GE", "LE",
@@ -50,6 +50,7 @@ class Lexer(sly.Lexer):
     IDENT["else"] = "ELSE"
     IDENT["for"] = "FOR"
     IDENT["while"] = "WHILE"
+    IDENT["class"] = "CLASS"
     IDENT["return"] = "RETURN"
     IDENT["break"] = "BREAK"
     IDENT["continue"] = "CONTINUE"
@@ -57,6 +58,9 @@ class Lexer(sly.Lexer):
     IDENT["and"] = "AND"
     IDENT["or"] = "OR"
     IDENT["not"] = "NOT"
+    IDENT["private"] = "PRIVATE"
+    IDENT["public"] = "PUBLIC"
+    IDENT["protected"] = "PROTECTED"
     IDENT["true"] = "BOOL_LIT"
     IDENT["false"] = "BOOL_LIT"
     # IDENT[""] = ""
