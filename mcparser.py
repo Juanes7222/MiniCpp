@@ -38,12 +38,10 @@ class Parser(sly.Parser):
 
     @_("var_decl")
     def decl(self, p):
-        print("var")
         return p.var_decl
 
     @_("func_decl")
     def decl(self, p):
-        print("func")
         return p.func_decl
 
     @_("type_spec IDENT ';'")
