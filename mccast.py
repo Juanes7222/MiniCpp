@@ -90,10 +90,15 @@ class ExprStmt(Statement):
     expr: Expression
 
 @dataclass
+class ElseStmt(Statement):
+    body: Statement
+
+@dataclass
 class IfStmt(Statement):
     condition: Expression
     then_brach: Statement
-    else_branch: Union[Statement, None]
+    else_branch: Union[ElseStmt, None]
+    
 
 @dataclass
 class WhileStmt(Statement):
@@ -174,6 +179,7 @@ class NewArrayExpr(Expression):
     array_type: str
     ident: str
     size_expr: Expression
+    value: Expression = field(default_factory=NullStmt)
 
 @dataclass
 class CallExpr(Expression):
@@ -198,6 +204,7 @@ class ArraySizeExpr(Expression):
 class VarDeclStmt(Statement):
     type_: str
     var_name: str
+    value: Expression = field(default_factory=NullStmt)
 
 @dataclass
 class ArrayDeclStmt(Statement):
@@ -222,13 +229,15 @@ class RenderTree(Visitor):
         var_node = parent_tree.add(f'VarAssignment: {n.ident}')
         n.expr.accept(self, var_node)
         
+    def visit(self, n: VarDeclStmt, parent_tree: Tree):
+        parent_tree.add(f'Variable Declaration: {n.type_} {n.var_name} {n.value if not isinstance(n.value, NullStmt) else ""}')
+                
     def visit(self, n: StaticVarDeclStmt, parent_tree: Tree):
         var_node = parent_tree.add(f'Var: {n.ident}')
         n.expr.accept(self, var_node)
         
     def visit(self, n: ArrayDeclStmt, parent_tree: Tree):
-        var_node = parent_tree.add(f'Array: {n.ident}')
-        n.expr.accept(self, var_node)
+        parent_tree.add(f'Array Declaration: {n.ident} {n.type_}')
 
     def visit(self, n: ExprStmt, parent_tree: Tree):
         expr_node = parent_tree.add(f'ExprStmt')
@@ -240,6 +249,10 @@ class RenderTree(Visitor):
         n.then_brach.accept(self, if_node)
         if n.else_branch:
             n.else_branch.accept(self, if_node)
+            
+    def visit(self, n: ElseStmt, parent_tree: Tree):
+        else_node = parent_tree.add("Else Statement")        
+        n.body.accept(self, else_node)
 
     def visit(self, n: WhileStmt, parent_tree: Tree):
         while_node = parent_tree.add(f'WhileStmt')
@@ -267,8 +280,6 @@ class RenderTree(Visitor):
             param.accept(self, func_node)
         n.body.accept(self, func_node)
 
-    
-
     def visit(self, n: ConstExpr, parent_tree: Tree):
         parent_tree.add(f'ConstExpr: {n.value}')
 
@@ -289,13 +300,23 @@ class RenderTree(Visitor):
         for arg in n.args:
             arg.accept(self, call_node)
             
+    def visit(self, n: NewArrayExpr, parent_tree: Tree):
+        array_node = parent_tree.add(f'New Array: {n.array_type} {n.ident} {n.value if not isinstance(n.value, NullStmt) else ""}')        
+        n.size_expr.accept(self, array_node)
+            
     def visit(self, n: NullStmt, parent_tree: Tree):
         parent_tree.add(f'NullStmt')
+        
+    def visit(self, n: CompoundStmt, parent_tree: Tree):
+        compound_node = parent_tree.add("Compound Statement")
+        
+        for local_decl in n.local_decls:
+            local_decl.accept(self, compound_node)
+
+        for stmt in n.stmt_list:
+            stmt.accept(self, compound_node)
     
     def render(self, root_node):
-        # Crear el árbol principal
         tree = Tree("AST")
-        # Iniciar el recorrido del AST
         self.visit(root_node, tree)
-        # Imprimir el árbol en la consola
         rich_print(tree)

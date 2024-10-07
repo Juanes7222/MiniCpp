@@ -4,26 +4,26 @@ Analizador Sintactico (LALR)
 '''
 from rich import print
 from mccast import (VarAssignmentExpr, ExprStmt, NullStmt, VarDeclStmt, FunctDecltmt, StaticVarDeclStmt, CompoundStmt, NewArrayExpr, ConstExpr, ReturnStmt, BreakStmt, 
-                    BinaryOpExpr, UnaryOpExpr, ArrayAssignmentExpr, VarExpr, ArrayLoockupExpr, CallExpr, IfStmt, ForStmt, WhileStmt, ArrayDeclStmt, Program, RenderTree,
+                    BinaryOpExpr, UnaryOpExpr, ArrayAssignmentExpr, VarExpr, ArrayLoockupExpr, CallExpr, IfStmt, ElseStmt, ForStmt, WhileStmt, ArrayDeclStmt, Program, RenderTree,
                     ArraySizeExpr)
 import sly
 
 from mclex import Lexer
 
 class Parser(sly.Parser):
-    debugfile = 'minicc.txt'
     start = 'program'
+    debugfile = 'minicc.txt'
     tokens = Lexer.tokens
 
     precedence = (
         ('left', "OR"),
         ('left', "AND"),
         ('left', "NOT"),
-        ('right', "="),
         ('left', "EQ", "NE"),
         ('left', '<', "LE", '>', "GE"),
         ('left', '+', '-'),
         ('left', '*', '/', '%'),
+        ('right', "="),
         ('left', 'CHAR', 'FLOAT', 'INT', 'BOOL', 'VOID'),
         ('left', 'IDENT'),
         ('right', "UMINUS", "!"),
@@ -33,6 +33,7 @@ class Parser(sly.Parser):
 
     @_("{ decl }")
     def program(self, p):
+        print(p.decl)
         return Program(stmts=p.decl)
 
     @_("var_decl")
@@ -59,19 +60,23 @@ class Parser(sly.Parser):
 
     @_("type_spec IDENT '(' params ')' compound_stmt")
     def func_decl(self, p):
-        return FunctDecltmt(p.type_spec, p.IDENT, p.compund_stmt, p.params)
+        return FunctDecltmt(p.type_spec, p.IDENT, p.compound_stmt, p.params)
 
     @_("param_list")
     def params(self, p):
         return p.param_list
 
-    @_("VOID")
-    def params(self, p):
-        return NullStmt()
-
     @_("param")
     def param_list(self, p):
         return [p.param] 
+    
+    @_("empty")
+    def params(self, p):
+        return []
+
+    @_("VOID")
+    def params(self, p):
+        return []
 
     @_("param_list ',' param")
     def param_list(self, p):
@@ -79,31 +84,48 @@ class Parser(sly.Parser):
 
     @_("type_spec IDENT")
     def param(self, p):
-        return VarDeclStmt(p.IDENT, p.type_spec, False)
+        return VarDeclStmt(p.IDENT, p.type_spec)
 
     @_("type_spec IDENT '[' ']'")
     def param(self, p):
-        return VarDeclStmt(p.IDENT, p.type_spec, True)
+        return ArrayDeclStmt(p.IDENT, p.type_spec)
 
     @_("'{' local_decls stmt_list '}'")
     def compound_stmt(self, p):
         return CompoundStmt(p.local_decls, p.stmt_list)
     
-    @_("local_decl")
+    @_("local_decl local_decls")
     def local_decls(self, p):
-        return [p.local_decl]
-    
+        return [p.local_decl] + p.local_decls
+
     @_("empty")
     def local_decls(self, p):
         return []
 
     @_("type_spec IDENT ';'")
     def local_decl(self, p):
-        return VarDeclStmt(p.IDENT, p.type_spec)
-
-    @_("type_spec IDENT '[' ']' ';'")
+        return VarDeclStmt(p.type_spec, p.IDENT)
+    
+    @_("type_spec IDENT '=' expr ';'")
     def local_decl(self, p):
-        return ArrayDeclStmt(p.IDENT, p.type_spec)
+        return VarDeclStmt(p.type_spec, p.IDENT, p.expr)
+
+    @_("type_spec IDENT '[' expr ']' ';'")
+    def local_decl(self, p):
+        return NewArrayExpr(p.type_spec, p.IDENT, p.expr)
+    
+    @_("type_spec IDENT '[' expr ']' '=' '{' expr_list '}' ';'")
+    def local_decl(self, p):
+        return NewArrayExpr(p.type_spec, p.IDENT, p.expr, p.expr_list)
+    
+    @_("expr")
+    def expr_list(self, p):
+        return [p.expr]
+
+    @_("expr_list ',' expr")
+    def expr_list(self, p):
+        return p.expr_list + [p.expr]
+
 
     @_("{ stmt }")
     def stmt_list(self, p):
@@ -136,16 +158,14 @@ class Parser(sly.Parser):
     @_("expr_stmt")
     def for_init_stmt(self, p):
         return p.expr_stmt
-
+    
     @_("IF '(' expr ')' stmt ELSE stmt")
     def if_stmt(self, p):
-        return IfStmt(p.expr, p.stmt0, p.stmt1)
-
-    # @_("IF '(' expr ')' stmt")
-    # def if_stmt(self, p):
-    #     '''
-    #     if_stmt ::= IF '(' expr ')' stmt
-    #     '''
+        return IfStmt(p.expr, p.stmt0, ElseStmt(p.stmt1))
+    
+    @_("IF '(' expr ')' stmt %prec ELSE")
+    def if_stmt(self, p):
+        return IfStmt(p.expr, p.stmt, None)
 
     @_("RETURN [ expr ] ';'")
     def return_stmt(self, p):
@@ -158,7 +178,6 @@ class Parser(sly.Parser):
     @_("CONTINUE ';'")
     def break_stmt(self, p):
         return BreakStmt()
-
 
     @_("IDENT '=' expr")
     def expr(self, p):
@@ -174,8 +193,8 @@ class Parser(sly.Parser):
        "expr EQ expr",
        "expr NE expr",
        "expr LE expr",
-       "expr '<' expr",
        "expr GE expr",
+       "expr '<' expr",
        "expr '>' expr",
        "expr '+' expr",
        "expr '-' expr",
@@ -205,9 +224,9 @@ class Parser(sly.Parser):
     def expr(self, p):
         return CallExpr(p.IDENT, p.args)
 
-    # @_("IDENT '.' SIZE")
-    # def expr(self, p):
-    #     return ArraySizeExpr(p.IDENT)
+    @_("IDENT '.' SIZE")
+    def expr(self, p):
+        return ArraySizeExpr(p.IDENT)
 
     @_("BOOL_LIT", "INT_LIT", "FLOAT_LIT", "STRING", "CHAR_LIT")
     def expr(self, p):
@@ -247,11 +266,20 @@ def parse(source):
     pas = Parser()
 
     tokens = lex.tokenize(source)
+    # print(list(tokens))
     
     ast = pas.parse(tokens)
-    render_tree = RenderTree()
-    render_tree.render(ast)
+    if ast:
+        render_tree = RenderTree()
+        render_tree.render(ast)
+    else:
+        print("[red]No se ha creado el arbol[/red]")
 
 if __name__ == '__main__':
-    # parse(open(sys.argv[1], encoding='utf-8').read())
-    parse(open("hola.mcc", encoding='utf-8').read())
+    import sys
+    if len(sys.argv) != 2:
+        print(f"[red]Usage mclex.py textfile[/red]")
+        exit(1)
+        
+    parse(open(sys.argv[1], encoding='utf-8').read())
+    # parse(open("hola.mcc", encoding='utf-8').read())

@@ -9,7 +9,7 @@ class Lexer(sly.Lexer):
     tokens = (
         # Palabras reservadas
         "CHAR", "VOID", "BOOL", "INT", "FLOAT", "IF", "ELSE", "FOR", "WHILE",
-        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW",
+        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW", "SIZE",
 
         # Operadores de Relacion
         "AND", "OR", "EQ", "NE", "GE", "LE",
@@ -22,7 +22,7 @@ class Lexer(sly.Lexer):
     literals = "+-*/%=()[]{}.,:;<>!&|~" 
 
     #patrones a ignorar
-    ignore = " \t\r"
+    ignore = " \t"
     
     # Ignorar saltos de linea
     @_(r'\n+')
@@ -37,8 +37,14 @@ class Lexer(sly.Lexer):
     @_(r'/\*([^*]|\*(?!/))*\*/')
     def ignore_comment(self, t):
         self.lineno += t.value.count('\n')
-
-
+        
+    AND = r"&&"
+    OR = r"\|\|"
+    EQ = r"=="
+    NE = r"!="
+    LE = r"<="
+    GE = r">="
+    
     #Definicion de tokens
     IDENT = r"[a-zA-Z_][a-zA-Z0-9_]*"
     IDENT["void"] = "VOID"
@@ -60,13 +66,6 @@ class Lexer(sly.Lexer):
     IDENT["true"] = "BOOL_LIT"
     IDENT["false"] = "BOOL_LIT"
     # IDENT[""] = ""
-    
-    AND = r"&&"
-    OR = r"\|\|"
-    EQ = r"=="
-    NE = r"!="
-    LE = r"<="
-    GE = r">="
     
     @_(r'"(?:[^\"\\]|\\.)*"')
     def STRING(self, t):
