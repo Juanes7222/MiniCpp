@@ -117,11 +117,15 @@ class BreakStmt(Statement):
     pass
 
 @dataclass
+class ContinueStmt(Statement):
+    pass
+
+@dataclass
 class ReturnStmt(Statement):
     expr: Union[Expression, None]
 
 @dataclass
-class FunctDecltmt(Statement):
+class FunctDeclStmt(Statement):
     type_: str
     name: str
     body: Statement
@@ -204,7 +208,7 @@ class ArraySizeExpr(Expression):
 class VarDeclStmt(Statement):
     type_: str
     var_name: str
-    value: Expression = field(default_factory=NullStmt)
+    expr: Expression = field(default_factory=NullStmt)
 
 @dataclass
 class ArrayDeclStmt(Statement):
@@ -230,11 +234,10 @@ class RenderTree(Visitor):
         n.expr.accept(self, var_node)
         
     def visit(self, n: VarDeclStmt, parent_tree: Tree):
-        parent_tree.add(f'Variable Declaration: {n.type_} {n.var_name} {n.value if not isinstance(n.value, NullStmt) else ""}')
+        parent_tree.add(f'Variable Declaration: {n.type_} {n.var_name} {n.expr if not isinstance(n.expr, NullStmt) else ""}')
                 
     def visit(self, n: StaticVarDeclStmt, parent_tree: Tree):
-        var_node = parent_tree.add(f'Var: {n.ident}')
-        n.expr.accept(self, var_node)
+        parent_tree.add(f'Var: {n.ident}')
         
     def visit(self, n: ArrayDeclStmt, parent_tree: Tree):
         parent_tree.add(f'Array Declaration: {n.ident} {n.type_}')
@@ -274,7 +277,10 @@ class RenderTree(Visitor):
     def visit(self, n: BreakStmt, parent_tree: Tree):
         parent_tree.add(f'BreakStmt')
 
-    def visit(self, n: FunctDecltmt, parent_tree: Tree):
+    def visit(self, n: ContinueStmt, parent_tree: Tree):
+        parent_tree.add(f'ContinueStmt')
+
+    def visit(self, n: FunctDeclStmt, parent_tree: Tree):
         func_node = parent_tree.add(f'Function: {n.name}')
         for param in n.params:
             param.accept(self, func_node)
@@ -319,4 +325,4 @@ class RenderTree(Visitor):
     def render(self, root_node):
         tree = Tree("AST")
         self.visit(root_node, tree)
-        rich_print(tree)
+        return tree

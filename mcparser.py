@@ -3,9 +3,9 @@
 Analizador Sintactico (LALR)
 '''
 from rich import print
-from mccast import (VarAssignmentExpr, ExprStmt, NullStmt, VarDeclStmt, FunctDecltmt, StaticVarDeclStmt, CompoundStmt, NewArrayExpr, ConstExpr, ReturnStmt, BreakStmt, 
+from mccast import (VarAssignmentExpr, ExprStmt, NullStmt, VarDeclStmt, FunctDeclStmt, StaticVarDeclStmt, CompoundStmt, NewArrayExpr, ConstExpr, ReturnStmt, BreakStmt, 
                     BinaryOpExpr, UnaryOpExpr, ArrayAssignmentExpr, VarExpr, ArrayLoockupExpr, CallExpr, IfStmt, ElseStmt, ForStmt, WhileStmt, ArrayDeclStmt, Program, RenderTree,
-                    ArraySizeExpr)
+                    ArraySizeExpr, ContinueStmt)
 import sly
 
 from mclex import Lexer
@@ -58,7 +58,7 @@ class Parser(sly.Parser):
 
     @_("type_spec IDENT '(' params ')' compound_stmt")
     def func_decl(self, p):
-        return FunctDecltmt(p.type_spec, p.IDENT, p.compound_stmt, p.params)
+        return FunctDeclStmt(p.type_spec, p.IDENT, p.compound_stmt, p.params)
 
     @_("param_list")
     def params(self, p):
@@ -175,7 +175,7 @@ class Parser(sly.Parser):
 
     @_("CONTINUE ';'")
     def break_stmt(self, p):
-        return BreakStmt()
+        return ContinueStmt()
 
     @_("IDENT '=' expr")
     def expr(self, p):
@@ -259,7 +259,7 @@ class Parser(sly.Parser):
         value  = p.value  if p else 'EOF'
         print(f"Línea {lineno}: Error de sintaxis en '{value}'")
 
-def parse(source):
+def gen_ast(source):
     lex = Lexer()
     pas = Parser()
 
@@ -270,14 +270,15 @@ def parse(source):
     if ast:
         render_tree = RenderTree()
         render_tree.render(ast)
+        return render_tree
     else:
         print("[red]No se ha creado el arbol[/red]")
 
 if __name__ == '__main__':
     import sys
-    if len(sys.argv) != 2:
-        print(f"[red]Usage mclex.py textfile[/red]")
-        exit(1)
+    # if len(sys.argv) != 2:
+    #     print(f"[red]Usage mclex.py textfile[/red]")
+    #     exit(1)
         
-    parse(open(sys.argv[1], encoding='utf-8').read())
-    # parse(open("hola.mcc", encoding='utf-8').read())
+    # parse(open(sys.argv[1], encoding='utf-8').read())
+    gen_ast(open("isqrt.mcc", encoding='utf-8').read())
