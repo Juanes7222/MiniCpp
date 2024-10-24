@@ -144,8 +144,8 @@ class NullStmt(Statement):
 
 @dataclass
 class CompoundStmt(Statement):
-    local_decls: List[Expression] = field(default_factory=list) 
-    stmt_list: List[Statement] = field(default_factory=list)
+    decls: List[Expression] = field(default_factory=list) 
+    stmts: List[Statement] = field(default_factory=list)
 
 
 @dataclass
@@ -205,8 +205,8 @@ class ArraySizeExpr(Expression):
 
 @dataclass
 class VarDeclStmt(Statement):
-    type_: str
     ident: str
+    type_: str
     expr: Expression = field(default_factory=NullStmt)
 
 @dataclass
@@ -315,10 +315,10 @@ class RenderTree(Visitor):
     def visit(self, n: CompoundStmt, parent_tree: Tree):
         compound_node = parent_tree.add("Compound Statement")
         
-        for local_decl in n.local_decls:
+        for local_decl in n.decls:
             local_decl.accept(self, compound_node)
 
-        for stmt in n.stmt_list:
+        for stmt in n.stmts:
             stmt.accept(self, compound_node)
     
     def render(self, root_node):

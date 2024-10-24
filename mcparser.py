@@ -101,11 +101,11 @@ class Parser(sly.Parser):
 
     @_("type_spec IDENT ';'")
     def local_decl(self, p):
-        return VarDeclStmt(p.type_spec, p.IDENT)
+        return VarDeclStmt(p.IDENT, p.type_spec)
     
     @_("type_spec IDENT '=' expr ';'")
     def local_decl(self, p):
-        return VarDeclStmt(p.type_spec, p.IDENT, p.expr)
+        return VarDeclStmt(p.IDENT, p.type_spec, p.expr)
 
     @_("type_spec IDENT '[' expr ']' ';'")
     def local_decl(self, p):

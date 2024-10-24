@@ -20,6 +20,8 @@ class Context:
         self.source = ''
         self.ast    = None
         self.have_errors = False
+        self.localmap = {}  # Mapa de variables locales o nodos
+        self.ctxt = self  # Referencia al propio contexto para manejo de errores
 
     def parse(self, source):
         self.have_errors = False
