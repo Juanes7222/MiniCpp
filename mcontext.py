@@ -7,10 +7,11 @@ Sirve como repositorio de información sobre el programa,
 inluido el codigo fuente, informe de errores, etc.
 '''
 from rich     import print
-
+from collections import ChainMap
 from mccast    import Node
 from mclex    import Lexer
 from mcparser import Parser
+from mchecker import Checker
 
 class Context:
     def __init__(self):
@@ -27,7 +28,15 @@ class Context:
     
     def run(self):
         if not self.have_errors:
-            pass
+            # Crear una nueva tabla de símbolos (ChainMap) para el análisis semántico
+            env = ChainMap()
+
+            # Instancia del analizador semántico
+            try:
+                Checker.check(self.ast, env, self)  # Realiza el análisis semántico sobre el AST
+            except Exception as e:
+                print(f"Error durante el análisis semántico: {e}")
+                self.have_errors = True
     
     def find_source(self, node):
         indices = self.parser.index_position(node)

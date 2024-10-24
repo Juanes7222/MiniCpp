@@ -51,7 +51,6 @@ from dataclasses import dataclass, field
 from multimethod import multimeta
 from typing      import Union, List
 from rich.tree import Tree
-from rich import print as rich_print
 
 # =====================================================================
 # Clases Abstractas
@@ -127,7 +126,7 @@ class ReturnStmt(Statement):
 @dataclass
 class FunctDeclStmt(Statement):
     type_: str
-    name: str
+    ident: str
     body: Statement
     params: List[Statement] = field(default_factory=list)
 
@@ -207,7 +206,7 @@ class ArraySizeExpr(Expression):
 @dataclass
 class VarDeclStmt(Statement):
     type_: str
-    var_name: str
+    ident: str
     expr: Expression = field(default_factory=NullStmt)
 
 @dataclass
@@ -234,7 +233,7 @@ class RenderTree(Visitor):
         n.expr.accept(self, var_node)
         
     def visit(self, n: VarDeclStmt, parent_tree: Tree):
-        parent_tree.add(f'Variable Declaration: {n.type_} {n.var_name} {n.expr if not isinstance(n.expr, NullStmt) else ""}')
+        parent_tree.add(f'Variable Declaration: {n.type_} {n.ident} {n.expr if not isinstance(n.expr, NullStmt) else ""}')
                 
     def visit(self, n: StaticVarDeclStmt, parent_tree: Tree):
         parent_tree.add(f'Var: {n.ident}')
@@ -281,7 +280,7 @@ class RenderTree(Visitor):
         parent_tree.add(f'ContinueStmt')
 
     def visit(self, n: FunctDeclStmt, parent_tree: Tree):
-        func_node = parent_tree.add(f'Function: {n.name}')
+        func_node = parent_tree.add(f'Function: {n.ident}')
         for param in n.params:
             param.accept(self, func_node)
         n.body.accept(self, func_node)

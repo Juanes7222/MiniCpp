@@ -33,7 +33,6 @@ class Parser(sly.Parser):
 
     @_("{ decl }")
     def program(self, p):
-        print(p.decl)
         return Program(stmts=p.decl)
 
     @_("var_decl")
