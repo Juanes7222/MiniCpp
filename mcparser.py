@@ -50,6 +50,14 @@ class Parser(sly.Parser):
     @_("type_spec IDENT '[' expr ']' ';'")
     def var_decl(self, p):
         return NewArrayExpr(p.type_spec, p.IDENT, p.expr)
+    
+    @_("type_spec IDENT '=' expr ';'")
+    def var_decl(self, p):
+        return VarDeclStmt(p.IDENT, p.type_spec, p.expr)
+    
+    @_("type_spec IDENT '[' expr ']' '=' '{' expr_list '}' ';'")
+    def var_decl(self, p):
+        return NewArrayExpr(p.type_spec, p.IDENT, p.expr, p.expr_list)
 
     @_("VOID", "BOOL", "INT", "FLOAT", "CHAR")
     def type_spec(self, p):
@@ -90,13 +98,21 @@ class Parser(sly.Parser):
     @_("'{' local_decls stmt_list '}'")
     def compound_stmt(self, p):
         return CompoundStmt(p.local_decls, p.stmt_list)
-    
+
     @_("local_decl local_decls")
     def local_decls(self, p):
         return [p.local_decl] + p.local_decls
 
     @_("empty")
     def local_decls(self, p):
+        return []
+
+    @_("stmt stmt_list")
+    def stmt_list(self, p):
+        return [p.stmt] + p.stmt_list
+
+    @_("empty")
+    def stmt_list(self, p):
         return []
 
     @_("type_spec IDENT ';'")
@@ -124,9 +140,9 @@ class Parser(sly.Parser):
         return p.expr_list + [p.expr]
 
 
-    @_("{ stmt }")
-    def stmt_list(self, p):
-        return p.stmt
+    # @_("{ stmt }")
+    # def stmt_list(self, p):
+    #     return p.stmt
 
     @_("expr_stmt", "compound_stmt", "if_stmt", "while_stmt", "return_stmt", "break_stmt", "for_stmt")
     def stmt(self, p):
@@ -270,21 +286,15 @@ def gen_ast(source):
     pas = Parser()
 
     tokens = lex.tokenize(source)
-    # print(list(tokens))
-    
     ast = pas.parse(tokens)
     if ast:
         render_tree = RenderTree()
-        render_tree.render(ast)
-        return render_tree
+        tree = render_tree.render(ast)
+        return tree
     else:
         print("[red]No se ha creado el arbol[/red]")
 
 if __name__ == '__main__':
-    import sys
-    # if len(sys.argv) != 2:
-    #     print(f"[red]Usage mclex.py textfile[/red]")
-    #     exit(1)
-        
-    # parse(open(sys.argv[1], encoding='utf-8').read())
-    gen_ast(open("isqrt.mcc", encoding='utf-8').read())
+
+    tree = gen_ast(open("mandel.mcc", encoding='utf-8').read())
+    print(tree)

@@ -8,6 +8,8 @@ float width;
 float height;
 int threshhold;
 
+bool band = true;
+
 bool in_mandelbrot(float x0, float y0, int n) {
   float x;
   float y;

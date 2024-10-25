@@ -112,9 +112,6 @@ class Checker(Visitor):
     # Declarations
 
     def visit(self, n: Program, env: ChainMap, interp):
-        env = ChainMap()
-        env['scanf'] = True
-        env['printf'] = True
 
         main_found = False
 
@@ -133,11 +130,11 @@ class Checker(Visitor):
         env = env.new_child()
         env['fun'] = n.type_
         for p in n.params:
-            env[p.ident] = p.type_
+            env[p.ident] = p
         n.body.accept(self, env, interp)
 
     def visit(self, n: VarDeclStmt, env: ChainMap, interp):
-        env[n.ident] = n.type_
+        env[n.ident] = n
 
     # Statements
 
@@ -146,7 +143,7 @@ class Checker(Visitor):
         if n.ident in env:
             raise CheckError(f"Variable estática '{n.ident}' ya está definida en este entorno")
 
-        env[n.ident] = n.type_
+        env[n.ident] = n
 
     def visit(self, n: CompoundStmt, env: ChainMap, interp):
 
@@ -292,18 +289,15 @@ class Checker(Visitor):
         n.body.accept(self, env, interp)
 
     def visit(self, n: BinaryOpExpr, env: ChainMap, interp):
-        # Visitar los operandos izquierdo y derecho
         left_type = n.left.accept(self, env, interp)
         right_type = n.right.accept(self, env, interp)
 
-        # Verificar la operación usando el sistema de tipos
         result_type = check_binary_op(n.opr, left_type, right_type)
         
         if result_type is None:
             interp.ctxt.error(n, f"Incompatibilidad de tipos en operación binaria: {left_type} {n.opr} {right_type}")
             return None
 
-        # Devolver el tipo resultante
         return result_type
 
     def visit(self, n: UnaryOpExpr, env: ChainMap, interp):
@@ -320,7 +314,7 @@ class Checker(Visitor):
     def visit(self, n: VarExpr, env: ChainMap, interp):
         try:
             interp.localmap[id(n)] = _check_name(n.ident, env)
-            return env[n.ident]
+            return env[n.ident].type_
         except CheckError as err:
             interp.ctxt.error(n, str(err))
 
@@ -328,7 +322,7 @@ class Checker(Visitor):
         n.expr.accept(self, env, interp)
         try:
             interp.localmap[id(n)] = _check_name(n.ident, env)
-            return env[n.ident]
+            return env[n.ident].type_
         except CheckError as err:
             interp.ctxt.error(n, str(err))
 
