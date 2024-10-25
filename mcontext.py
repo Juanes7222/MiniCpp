@@ -7,6 +7,8 @@ Sirve como repositorio de información sobre el programa,
 inluido el codigo fuente, informe de errores, etc.
 '''
 from rich     import print
+from rich.console import Console
+from rich.table import Table
 from collections import ChainMap
 from mccast    import Node
 from mclex    import Lexer
@@ -35,7 +37,8 @@ class Context:
 
             # Instancia del analizador semántico
             try:
-                Checker.check(self.ast, env, self)  # Realiza el análisis semántico sobre el AST
+                env = Checker.check(self.ast, env, self)  # Realiza el análisis semántico sobre el AST
+                self.print_symbol_table(env)
             except Exception as e:
                 print(f"Error durante el análisis semántico: {e}")
                 self.have_errors = True
@@ -65,3 +68,30 @@ class Context:
         else:
             print(f"{position}: {message}")
         self.have_errors = True
+        
+    def print_symbol_table(self, env: ChainMap):
+        """
+        Muestra la tabla de símbolos actual (entorno) usando rich.
+        """
+        console = Console()
+
+        # Crear una tabla con rich
+        table = Table(title="Tabla de Símbolos")
+
+        # Agregar columnas a la tabla
+        table.add_column("Nombre", style="cyan", no_wrap=True)
+        table.add_column("Tipo", style="magenta")
+        table.add_column("Clase", style="green")
+
+        # Iterar sobre los scopes en el entorno
+        for scope in env.maps:
+            for name, info in scope.items():
+                if isinstance(info, dict):
+                    symbol_type = info.get('type', 'desconocido')
+                    symbol_kind = info.get('kind', 'variable')  # 'variable' o 'función'
+                    table.add_row(name, symbol_type, symbol_kind)
+                else:
+                    table.add_row(name, str(info), "desconocido")
+
+        # Mostrar la tabla con rich
+        console.print(table)

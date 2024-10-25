@@ -42,8 +42,8 @@ class Checker(Visitor):
     @classmethod
     def check(cls, n: Node, env: ChainMap, interp):
         checker = cls()
-        n.accept(checker, env.new_child(), interp)
-        return checker
+        env = n.accept(checker, env, interp)
+        return env
 
     def check_type_compatibility(self, left_type, right_type):
         if left_type == right_type:
@@ -125,13 +125,15 @@ class Checker(Visitor):
 
         if not main_found:
             raise CheckError("La función 'main' no está definida")
+        
+        return env
 
     def visit(self, n: FunctDeclStmt, env: ChainMap, interp):
         env[n.ident] = n
         env = env.new_child()
         env['fun'] = n.type_
         for p in n.params:
-            env[p.ident] = n.type_
+            env[p.ident] = p.type_
         n.body.accept(self, env, interp)
 
     def visit(self, n: VarDeclStmt, env: ChainMap, interp):
@@ -326,6 +328,7 @@ class Checker(Visitor):
         n.expr.accept(self, env, interp)
         try:
             interp.localmap[id(n)] = _check_name(n.ident, env)
+            return env[n.ident]
         except CheckError as err:
             interp.ctxt.error(n, str(err))
 

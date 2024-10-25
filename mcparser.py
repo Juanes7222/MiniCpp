@@ -227,7 +227,14 @@ class Parser(sly.Parser):
 
     @_("BOOL_LIT", "INT_LIT", "FLOAT_LIT", "STRING", "CHAR_LIT")
     def expr(self, p):
-        return ConstExpr(p[0])
+        if p[0] == 'true':
+            return ConstExpr(value=True)
+        elif p[0] == 'false':
+            return ConstExpr(value=False)
+        elif isinstance(p[0], int) or isinstance(p[0], float):
+            return ConstExpr(value=p[0])
+        else:
+            return ConstExpr(value=str(p[0]))
 
     @_("NEW type_spec '[' expr ']'")
     def expr(self, p):
