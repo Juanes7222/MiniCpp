@@ -139,11 +139,6 @@ class Parser(sly.Parser):
     def expr_list(self, p):
         return p.expr_list + [p.expr]
 
-
-    # @_("{ stmt }")
-    # def stmt_list(self, p):
-    #     return p.stmt
-
     @_("expr_stmt", "compound_stmt", "if_stmt", "while_stmt", "return_stmt", "break_stmt", "for_stmt")
     def stmt(self, p):
         return p[0]

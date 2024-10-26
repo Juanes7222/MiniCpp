@@ -264,16 +264,20 @@ class Checker(Visitor):
         size_type = n.size_expr.accept(self, env, interp)
         if size_type != 'int':
             raise CheckError(f"El tamaño del arreglo '{n.ident}' debe ser de tipo entero")
+        
+        if not isinstance(n.value, NullStmt):
+            if len(n.value) != n.size_expr.value:
+                raise CheckError(f"El tamaño del arreglo '{n.ident}' debe ser de {n.size_expr.value}")
 
-        env[n.ident] = f'array<{n.array_type}>'
+        env[n.ident] = n
 
         if not isinstance(n.value, NullStmt):
             value_type = {val.accept(self, env, interp) for val in n.value}
             if len(value_type) != 1:
-                raise CheckError(f"El valor inicial del arreglo '{n.ident}' no es compatible con el tipo '{n.array_type}'")
+                raise CheckError(f"El valor inicial del arreglo '{n.ident}' no es compatible con el tipo '{n.type_}'")
             value_type = list(value_type)[0]
-            if value_type != n.array_type:
-                raise CheckError(f"El valor inicial del arreglo '{n.ident}' no es compatible con el tipo '{n.array_type}'")
+            if value_type != n.type_:
+                raise CheckError(f"El valor inicial del arreglo '{n.ident}' no es compatible con el tipo '{n.type_}'")
 
     def visit(self, n: ArraySizeExpr, env: ChainMap, interp):
         if n.array not in env:

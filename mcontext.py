@@ -94,6 +94,11 @@ def extract_symbol_info(name, info):
         return info.type_, 'variable'
     elif isinstance(info, StaticVarDeclStmt):
         return info.type_, 'variable estática'
+    elif isinstance(info, ArrayDeclStmt):
+        return f"array<{info.type_}>", 'Array'
+    elif isinstance(info, NewArrayExpr):
+        return f"array<{info.type_}>", 'Array'
+
     else:
         return 'desconocido', 'desconocido'
 

@@ -179,7 +179,7 @@ class BinaryOpExpr(Expression):
 
 @dataclass
 class NewArrayExpr(Expression):
-    array_type: str
+    type_: str
     ident: str
     size_expr: Expression
     value: Expression = field(default_factory=NullStmt)
@@ -306,7 +306,7 @@ class RenderTree(Visitor):
             arg.accept(self, call_node)
             
     def visit(self, n: NewArrayExpr, parent_tree: Tree):
-        array_node = parent_tree.add(f'New Array: {n.array_type} {n.ident} {n.value if not isinstance(n.value, NullStmt) else ""}')        
+        array_node = parent_tree.add(f'New Array: {n.type_} {n.ident} {n.value if not isinstance(n.value, NullStmt) else ""}')        
         n.size_expr.accept(self, array_node)
             
     def visit(self, n: NullStmt, parent_tree: Tree):
