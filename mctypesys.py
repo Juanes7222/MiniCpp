@@ -19,7 +19,7 @@ punto de partida.
 Puede volver y refactorizar el sistema de tipos mas tarde.
 '''
 # Conjunto valido de typenames
-typenames = {'int', 'float', 'bool'}
+typenames = {'int', 'float', 'bool', 'null'}
 
 # Tabla de todas las operaciones binarias soportadas y el tipo resultante
 _binary_ops = {

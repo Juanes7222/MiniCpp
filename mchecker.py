@@ -249,6 +249,8 @@ class Checker(Visitor):
             return 'float'
         elif isinstance(n.value, str):
             return 'string'
+        elif n.value is None:
+            return "null"
         else:
             raise CheckError("Constante desconocida")
 

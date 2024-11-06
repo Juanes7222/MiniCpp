@@ -19,6 +19,7 @@ class Lexer(sly.Lexer):
         "IDENT", "STRING", "BOOL_LIT", "INT_LIT", "FLOAT_LIT", "CHAR_LIT",
         "INCREMENT", "DECREMENT",
         "PLUSEQ", "MINUSEQ", "MULTEQ", "DIVEQ",
+        "NULL"
 
     )
     literals = "+-*/%=()[]{}.,:;<>!&|~" 
@@ -56,6 +57,7 @@ class Lexer(sly.Lexer):
     #Definicion de tokens
     IDENT = r"[a-zA-Z_][a-zA-Z0-9_]*"
     IDENT["void"] = "VOID"
+    IDENT["null"] = "NULL"
     IDENT["bool"] = "BOOL"
     IDENT["int"] = "INT"
     IDENT["float"] = "FLOAT"

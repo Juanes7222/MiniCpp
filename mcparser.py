@@ -288,6 +288,10 @@ class Parser(sly.Parser):
     @_("")
     def empty(self, p):
         pass
+    
+    @_('NULL')
+    def expr(self, p):
+        return ConstExpr(value=None)
 
     def error(self, p):
         lineno = p.lineno if p else 'EOF'
