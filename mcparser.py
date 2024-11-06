@@ -3,9 +3,7 @@
 Analizador Sintactico (LALR)
 '''
 from rich import print
-from mccast import (VarAssignmentExpr, ExprStmt, NullStmt, VarDeclStmt, FunctDeclStmt, StaticVarDeclStmt, CompoundStmt, NewArrayExpr, ConstExpr, ReturnStmt, BreakStmt, 
-                    BinaryOpExpr, UnaryOpExpr, ArrayAssignmentExpr, VarExpr, ArrayLoockupExpr, CallExpr, IfStmt, ElseStmt, ForStmt, WhileStmt, ArrayDeclStmt, Program, RenderTree,
-                    ArraySizeExpr, ContinueStmt)
+from mccast import *
 import sly
 
 from mclex import Lexer
@@ -27,7 +25,9 @@ class Parser(sly.Parser):
         ('left', 'CHAR', 'FLOAT', 'INT', 'BOOL', 'VOID'),
         ('left', 'IDENT'),
         ('right', "UMINUS", "!"),
-        ('right', 'ELSE')
+        ('right', 'ELSE'),
+        ('right', 'INCREMENT', 'DECREMENT'),
+        ('right', 'PLUSEQ', 'MINUSEQ', 'MULTEQ', 'DIVEQ')
     )
     # Definir las Reglas de la gramática
 
@@ -194,6 +194,24 @@ class Parser(sly.Parser):
     @_("IDENT '[' expr ']' '=' expr")
     def expr(self, p):
         return ArrayAssignmentExpr(p.IDENT, p.expr0, p.expr1)
+    
+    @_('INCREMENT expr %prec INCREMENT',
+       'DECREMENT expr %prec DECREMENT')
+    def expr(self, p):
+        return UnaryOpExpr(p[0], p.expr)
+    
+    # Notación postfija (a++ y a--)
+    @_('expr INCREMENT %prec INCREMENT',
+       'expr DECREMENT %prec DECREMENT')
+    def expr(self, p):
+        return UnaryOpExpr(p[1], p.expr)
+    
+    @_('expr PLUSEQ expr',
+       'expr MINUSEQ expr',
+       'expr MULTEQ expr',
+       'expr DIVEQ expr')
+    def expr(self, p):
+        return CompoundAssignmentExpr(p.expr0, p[1], p.expr1)
 
     @_("expr OR expr",
        "expr AND expr",

@@ -158,6 +158,12 @@ class VarAssignmentExpr(Expression):
     expr : Expression
 
 @dataclass
+class CompoundAssignmentExpr(Expression):
+    ident: str        
+    opr: str          
+    expr: Expression 
+
+@dataclass
 class VarExpr(Expression):
     ident: str
 

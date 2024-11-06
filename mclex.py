@@ -17,6 +17,8 @@ class Lexer(sly.Lexer):
 
         #Otros simbolos
         "IDENT", "STRING", "BOOL_LIT", "INT_LIT", "FLOAT_LIT", "CHAR_LIT",
+        "INCREMENT", "DECREMENT",
+        "PLUSEQ", "MINUSEQ", "MULTEQ", "DIVEQ",
 
     )
     literals = "+-*/%=()[]{}.,:;<>!&|~" 
@@ -44,6 +46,12 @@ class Lexer(sly.Lexer):
     NE = r"!="
     LE = r"<="
     GE = r">="
+    INCREMENT = r"\+\+"
+    DECREMENT = r"\-\-"
+    PLUSEQ = r'\+='
+    MINUSEQ = r'-='
+    MULTEQ = r'\*='
+    DIVEQ = r'/='
     
     #Definicion de tokens
     IDENT = r"[a-zA-Z_][a-zA-Z0-9_]*"

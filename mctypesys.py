@@ -35,12 +35,22 @@ _binary_ops = {
     ('>=', 'int', 'int') : 'bool',
     ('==', 'int', 'int') : 'bool',
     ('!=', 'int', 'int') : 'bool',
+    
+    ('+=', 'int', 'int') : 'int',
+    ('-=', 'int', 'int') : 'int',
+    ('*=', 'int', 'int') : 'int',
+    ('/=', 'int', 'int') : 'int',
 
     # Operaciones float
     ('+', 'float', 'float') : 'float',
     ('-', 'float', 'float') : 'float',
     ('*', 'float', 'float') : 'float',
     ('/', 'float', 'float') : 'float',
+    
+    ('+=', 'float', 'float') : 'float',
+    ('-=', 'float', 'float') : 'float',
+    ('*=', 'float', 'float') : 'float',
+    ('/=', 'float', 'float') : 'float',
 
     ('<',  'float', 'float') : 'bool',
     ('<=', 'float', 'float') : 'bool',
@@ -60,10 +70,15 @@ _unary_ops = {
     # Operaciones int
     ('+', 'int') : 'int',
     ('-', 'int') : 'int',
+    ('++', 'int') : 'int',  # Prefijo o postfijo ++ para int
+    ('--', 'int') : 'int',  # Prefijo o postfijo -- para int
 
     # Operaciones float
     ('+', 'float') : 'float',
     ('-', 'float') : 'float',
+    ('++', 'float') : 'float',  # Prefijo o postfijo ++ para float
+    ('--', 'float') : 'float',  # Prefijo o postfijo -- para float
+
 
     # Bools
     ('!', 'bool') : 'bool',

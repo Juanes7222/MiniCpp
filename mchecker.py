@@ -102,8 +102,19 @@ class Checker(Visitor):
         type_map = {
             '%d': 'int',
             '%f': 'float',
+            '%F': 'float',
+            '%e': 'float',
+            '%E': 'float',
+            '%a': 'float',
+            '%A': 'float',
+            '%g': 'float',
+            '%G': 'float',
             '%s': 'string',
-            '%c': "char"
+            '%c': "char",
+            '%o': 'int',
+            '%x': 'int',
+            '%X': 'int',
+            '%u': 'int',
         }
 
         matches = re.findall(r'%[dfs]', format_string)
@@ -306,6 +317,12 @@ class Checker(Visitor):
 
     def visit(self, n: UnaryOpExpr, env: ChainMap, interp):
         expr_type = n.expr.accept(self, env, interp)
+        
+         # Verificar que el operador se aplique a variables de tipo int o float
+        if n.opr in ('++', '--') and expr_type not in ('int', 'float'):
+            raise CheckError(
+                f"El operador '{n.opr}' solo se puede aplicar a tipos numéricos (int o float), encontrado: '{expr_type}'"
+            )
 
         result_type = check_unary_op(n.opr, expr_type)
         
@@ -329,6 +346,21 @@ class Checker(Visitor):
             return env[n.ident].type_
         except CheckError as err:
             interp.ctxt.error(n, str(err))
+            
+    def visit(self, n: CompoundAssignmentExpr, env: ChainMap, interp):
+        # Verificar que la variable esté definida
+        var_type = n.ident.accept(self, env, interp)
+        
+        # Verificar el tipo de la expresión del lado derecho
+        expr_type = n.expr.accept(self, env, interp)
+
+        # Validar la operación usando la función `check_binary_op` para tipos compatibles
+        result_type = check_binary_op(n.opr, var_type, expr_type)
+        if result_type is None:
+            raise CheckError(
+                f"Incompatibilidad de tipos: '{var_type}' no es compatible con '{expr_type}' para la operación '{n.opr}'"
+            )
+        return result_type
 
     def visit(self, n: CallExpr, env: ChainMap, interp):
         if n.func_name not in env:

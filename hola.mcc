@@ -1,29 +1,13 @@
 
 int main(){
     // Imprimimos una cadena
+    int j;
     int i = 0;
-    float pi;
-    bool band;
-    int h[3] = {1, 3, 4};
 
-    i = 10;
-    pi = 3.1415;
-    printf("Hola Clase");
-    while(i==1){
-      printf("Hola mundo");
-      break;
-    }
-
-    if (band){
-      printf("mundo");
-    }
-
-    if (pi == 3.14){
-      printf("mundo");
-    }else{
-      return 1;
-    }
-
-   // Salimos del programa, retornando 0=Ok
+    i += j;
+    i -= j;
+    i *= j;
+    i /= j;
+    i /= 1;
     return 0;
 }

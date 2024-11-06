@@ -16,7 +16,20 @@ bool in_mandelbrot(float x0, float y0, int n) {
   float x;
   float y;
   float xtemp;
-  printf("hola mundo"); 
+  int h;
+  x = 10.4;
+  printf("hola mundo %f", x);
+  x++;
+  h=0;
+  h--;
+  --h;
+  h++;
+  ++h;
+
+  y += x;
+  y -= x;
+  y *= x;
+  y /= x;
   
   x = 0.0;
   y = 0.0;
