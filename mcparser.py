@@ -42,6 +42,18 @@ class Parser(sly.Parser):
     @_("func_decl")
     def decl(self, p):
         return p.func_decl
+    
+    @_("class_decl")
+    def decl(self, p):
+        return p.class_decl
+    
+    @_('IDENT IDENT "=" NEW IDENT "(" ")" ";"')
+    def var_decl(self, p):
+        return ClassInstanceCreation(
+            type_=p.IDENT0,  # Nombre de la clase
+            ident=p.IDENT1,   # Nombre de la variable
+            constructor=p.IDENT2  # Constructor
+        )
 
     @_("type_spec IDENT ';'")
     def var_decl(self, p):
@@ -59,7 +71,8 @@ class Parser(sly.Parser):
     def var_decl(self, p):
         return NewArrayExpr(p.type_spec, p.IDENT, p.expr, p.expr_list)
 
-    @_("VOID", "BOOL", "INT", "FLOAT", "CHAR")
+
+    @_("VOID", "BOOL", "INT", "FLOAT", "CHAR", "STRING")
     def type_spec(self, p):
         return p[0]
 
@@ -130,6 +143,14 @@ class Parser(sly.Parser):
     @_("type_spec IDENT '[' expr ']' '=' '{' expr_list '}' ';'")
     def local_decl(self, p):
         return NewArrayExpr(p.type_spec, p.IDENT, p.expr, p.expr_list)
+    
+    @_('IDENT IDENT "=" NEW IDENT "(" ")" ";"')
+    def local_decl(self, p):
+        return ClassInstanceCreation(
+            type_=p.IDENT0,  # Nombre de la clase
+            ident=p.IDENT1,   # Nombre de la variable
+            constructor=p.IDENT2  # Constructor
+        )
     
     @_("expr")
     def expr_list(self, p):
@@ -254,7 +275,7 @@ class Parser(sly.Parser):
     def expr(self, p):
         return ArraySizeExpr(p.IDENT)
 
-    @_("BOOL_LIT", "INT_LIT", "FLOAT_LIT", "STRING", "CHAR_LIT")
+    @_("BOOL_LIT", "INT_LIT", "FLOAT_LIT", "STRING_LIT", "CHAR_LIT")
     def expr(self, p):
         if p[0] == 'true':
             return ConstExpr(value=True)
@@ -268,6 +289,15 @@ class Parser(sly.Parser):
     @_("NEW type_spec '[' expr ']'")
     def expr(self, p):
         return NewArrayExpr(p.type_spec, p.expr)
+    
+    @_('expr "." IDENT')
+    def expr(self, p):
+        return Get(obj=p.expr, name=p.IDENT)
+    
+    @_('expr "." IDENT "(" args ")"')
+    def expr(self, p):
+        return CallMethod(obj=p.expr, ident=p.IDENT, args=p.args)
+
 
     @_("arg_list")
     def args(self, p):
@@ -284,7 +314,126 @@ class Parser(sly.Parser):
     @_("expr")
     def arg_list(self, p):
         return [p.expr]
+    
+    
+    @_('CLASS IDENT "{" class_body "}"')
+    def class_decl(self, p):
+        return ClassDeclStmt(
+            ident=p.IDENT,
+            sclass=None,  # Sin clase base
+            properties=p.class_body['properties'],
+            methods=p.class_body['methods']
+        )
 
+    @_('CLASS IDENT ":" IDENT "{" class_body "}"')
+    def class_decl(self, p):
+        return ClassDeclStmt(
+            ident=p.IDENT0,
+            sclass=p.IDENT1,  # Clase base
+            properties=p.class_body['properties'],
+            methods=p.class_body['methods']
+    )
+        
+    @_('class_members')
+    def class_body(self, p):
+        return {
+            'properties': p.class_members['properties'],
+            'methods': p.class_members['methods']
+        }
+
+    @_('class_members class_property')
+    def class_members(self, p):
+        p.class_members['properties'].append(p.class_property)
+        return p.class_members
+
+    @_('class_members class_method')
+    def class_members(self, p):
+        p.class_members['methods'].append(p.class_method)
+        return p.class_members
+
+    @_('class_property')
+    def class_members(self, p):
+        return {'properties': [p.class_property], 'methods': []}
+
+    @_('class_method')
+    def class_members(self, p):
+        return {'properties': [], 'methods': [p.class_method]}
+
+    @_('access_specifier type_spec IDENT ";"')
+    def class_property(self, p):
+        return ClassPropertyDecl(
+            ident=p.IDENT,
+            type_=p.type_spec,
+            access=p.access_specifier
+        )
+        
+    @_('access_specifier type_spec IDENT "[" expr "]" ";"')
+    def class_property(self, p):
+        return ClassArrayPropertyDecl(
+            ident=p.IDENT,
+            type_=p.type_spec,
+            access=p.access_specifier,
+            size=p.expr
+        )
+
+    @_('access_specifier type_spec IDENT "=" expr ";"')
+    def class_property(self, p):
+        return ClassPropertyDecl(
+            ident=p.IDENT,
+            type_=p.type_spec,
+            access=p.access_specifier,
+            value=p.expr
+        )
+    
+    @_('access_specifier type_spec IDENT "[" expr "]" "=" "{" expr_list "}" ";"')
+    def class_property(self, p):
+        return ClassArrayPropertyDecl(
+            ident=p.IDENT,
+            type_=p.type_spec,
+            access=p.access_specifier,
+            size=p.expr,
+            values=p.expr_list
+        )
+
+    @_('access_specifier type_spec IDENT "(" params ")" compound_stmt')
+    def class_method(self, p):
+        return ClassMethodDecl(
+            ident=p.IDENT,
+            params=p.params,
+            body=p.compound_stmt,
+            access=p.access_specifier,
+            type_=p.type_spec
+        )
+
+    @_('PUBLIC', 'PRIVATE', 'PROTECTED')
+    def access_specifier(self, p):
+        return p[0]
+
+    @_('empty')
+    def access_specifier(self, p):
+        return "public"
+    
+    @_('THIS "." IDENT "=" expr')
+    def expr(self, p):
+        return Set(
+            obj=This(),       # Nodo que representa "this"
+            ident=p.IDENT,     # Nombre de la propiedad
+            value=p.expr      # Valor a asignar
+        )
+    
+    @_('THIS "." IDENT')
+    def expr(self, p):
+        return Get(obj=This(), ident=p.IDENT)
+
+    @_('SUPER "." IDENT "(" args ")"')
+    def expr(self, p):
+        return SuperMethodCall(ident=p.IDENT, args=p.args)
+
+    # Acceso a un atributo con 'super'
+    @_('SUPER "." IDENT')
+    def expr(self, p):
+        return SuperAccess(ident=p.IDENT)
+    
     @_("")
     def empty(self, p):
         pass
@@ -303,6 +452,7 @@ def gen_ast(source):
     pas = Parser()
 
     tokens = lex.tokenize(source)
+    # print(list(tokens))
     ast = pas.parse(tokens)
     if ast:
         render_tree = RenderTree()

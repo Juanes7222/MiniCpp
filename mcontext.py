@@ -14,6 +14,8 @@ from mccast    import *
 from mclex    import Lexer
 from mcparser import Parser
 from mchecker import Checker
+from mctypes import ClassType
+from mcinterp import Interpreter
 
 class Context:
     def __init__(self):
@@ -34,22 +36,18 @@ class Context:
     def run(self):
         if not self.have_errors:
             self.env = ChainMap()
-
-            self.env['printf'] = {
-            'type': 'int',
-            'kind': 'función integrada',
-            'params': [('format', 'string'), ('args', '...')]
-            }
-            self.env['scanf'] = {
-                'type': 'int',
-                'kind': 'función integrada',
-                'params': [('format', 'string'), ('args', '...')]
-            }
             try:
-                self.env = Checker.check(self.ast, self.env, self)  # Realiza el análisis semántico sobre el AST
-                print_symbol_table(self.env)
+                interpreter = Interpreter(self)
+                self.env = interpreter.interpret(self.ast)
+                main_function = self.env.get("main")
+                if not main_function:
+                    print("Error: No se definió una función 'main'")
+                    return
+
+                print("\n--- Ejecutando Programa ---")
+                interpreter.call(main_function, self.env)
             except Exception as e:
-                print(f"Error durante el análisis semántico: {e}")
+                print(f"Error durante la ejecución: {e}")
                 self.have_errors = True
     
     def find_source(self, node):
@@ -98,9 +96,12 @@ def extract_symbol_info(name, info):
         return f"array<{info.type_}>", 'Array'
     elif isinstance(info, NewArrayExpr):
         return f"array<{info.type_}>", 'Array'
+    elif isinstance(info, ClassType):
+        return f"Clase", f"Miembros: {len(info.members)}"
 
     else:
         return 'desconocido', 'desconocido'
+
 
 def print_symbol_table(env: ChainMap):
     """
@@ -116,7 +117,16 @@ def print_symbol_table(env: ChainMap):
 
     for scope in env.maps:
         for name, info in scope.items():
+            # Extraer información básica del símbolo
             symbol_type, symbol_kind = extract_symbol_info(name, info)
-            table.add_row(name, symbol_type, symbol_kind)
+            
+            # Si es una clase, mostrar sus miembros
+            if isinstance(info, ClassType):
+                table.add_row(name, "Clase", symbol_kind)
+                for member_name, member_info in info.members.items():
+                    member_type, member_kind = extract_symbol_info(member_name, member_info)
+                    table.add_row(f"  {member_name}", member_type, member_kind)
+            else:
+                table.add_row(name, symbol_type, symbol_kind)
 
     console.print(table)

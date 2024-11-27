@@ -49,7 +49,7 @@ Expression
 '''
 from dataclasses import dataclass, field
 from multimethod import multimeta
-from typing      import Union, List
+from typing      import Union, List, Dict
 from rich.tree import Tree
 
 # =====================================================================
@@ -134,6 +134,65 @@ class FunctDeclStmt(Statement):
 class StaticVarDeclStmt(Statement):
     ident: str
     type_: str
+
+
+#nuevo
+@dataclass
+class Print(Statement):
+    expr: Expression  
+
+#nuevo
+@dataclass
+class LogicalOpExpr(Expression):
+    left: Expression  
+    right: Expression  
+    op: str          
+
+#nuevo
+@dataclass
+class Grouping(Expression):
+    expr: Expression  
+
+#nuevo
+@dataclass
+class PreInc(Expression):
+    name: str  
+
+@dataclass
+class PreDec(Expression):
+    name: str 
+
+@dataclass
+class PostInc(Expression):
+    name: str  
+
+@dataclass
+class PostDec(Expression):
+    name: str  
+
+#nuevo
+@dataclass
+class Set(Expression):
+    obj: Expression    
+    ident: str          
+    value: Expression  
+
+
+@dataclass
+class Get(Expression):
+    obj: Expression    
+    ident: str          
+
+
+@dataclass
+class This(Expression):
+    pass  
+
+
+@dataclass
+class Super(Expression):
+    ident: str          
+    obj: Expression 
     
 # =====================================================================
 # Clases Concretas
@@ -219,6 +278,63 @@ class VarDeclStmt(Statement):
 class ArrayDeclStmt(Statement):
     ident: str
     type_: str
+    
+#nuevo
+@dataclass
+class ClassPropertyDecl(Statement):
+    ident: str                           # Nombre de la propiedad
+    type_: str                          # Tipo de la propiedad
+    access: str = "public"              # Especificador de acceso (por defecto, 'public')
+    value: Expression = field(default_factory=lambda: None)  # Valor inicial (opcional)
+    
+@dataclass
+class ClassArrayPropertyDecl(Statement):
+    ident: str                           # Nombre de la propiedad
+    type_: str                          # Tipo de la propiedad
+    size: Expression
+    access: str = "public"              # Especificador de acceso (por defecto, 'public')
+    values: List[Expression] = field(default_factory=list)  # Valor inicial (opcional)
+
+@dataclass
+class ClassMethodDecl(Statement):
+    ident : str                        
+    body: CompoundStmt   
+    type_: str
+    params: List[VarDeclStmt] = field(default_factory=list) 
+    access: str = "public"
+    
+@dataclass
+class ClassDeclStmt(Statement):
+    ident: str                 
+    sclass: Union[Expression, None]  
+    methods: List[ClassMethodDecl] = field(default_factory=list)      
+    properties: List[ClassPropertyDecl] = field(default_factory=list)
+    
+@dataclass
+class SuperAccess(Expression):
+    ident: str
+
+@dataclass
+class SuperMethodCall(Expression):
+    ident: str
+    args: List[Expression] = field(default_factory=list)
+    
+@dataclass
+class ClassInstanceCreation(Statement):
+    type_: str  # Nombre de la clase
+    ident: str   # Nombre de la variable que contiene la instancia
+    constructor: str  # Constructor invocado (normalmente coincide con el nombre de la clase)
+
+@dataclass
+class CallMethod(Expression):
+    """
+    Representa la llamada a un método en una instancia.
+    """
+    obj: Expression    # Objeto en el que se llama al método
+    ident: str          # Nombre del método
+    args: List[Expression]  # Argumentos de la llamada
+
+
 
 class RenderTree(Visitor):
     def __init__(self):
@@ -326,6 +442,104 @@ class RenderTree(Visitor):
 
         for stmt in n.stmts:
             stmt.accept(self, compound_node)
+            
+    #nuevo
+    def visit(self, n: ClassDeclStmt, parent_tree: Tree):
+        class_node = parent_tree.add(f'ClassDeclStmt: {n.ident}')
+        if n.sclass:
+            class_node.add(f'Extends: {n.sclass}')
+        # Agregar propiedades
+        properties_node = class_node.add('Properties')
+        for prop in n.properties:
+            prop.accept(self, properties_node)
+        # Agregar métodos
+        methods_node = class_node.add('Methods')
+        for method in n.methods:
+            method.accept(self, methods_node)
+            
+    def visit(self, n: ClassMethodDecl, parent_tree: Tree):
+        method_node = parent_tree.add(f'Method: {n.ident} (Access: {n.access}) Type: {n.type_}')
+        params_node = method_node.add('Parameters')
+        for param in n.params:
+            param.accept(self, params_node)
+        method_node.add('Body')
+        n.body.accept(self, method_node)
+
+    def visit(self, n: ClassPropertyDecl, parent_tree: Tree):
+        parent_tree.add(f'Property: {n.ident} (Type: {n.type_}, Access: {n.access})')
+        
+    def visit(self, n: ClassArrayPropertyDecl, parent_tree: Tree):
+        parent_tree.add(f'ClassArrayProperty: {n.ident} (Type: {n.type_}, Size: {n.size}, Access: {n.access})')
+
+
+    
+    #nuevo
+    def visit(self, n: Print, parent_tree: Tree):
+        print_node = parent_tree.add('Print')
+        n.expr.accept(self, print_node)
+
+    #nuevo
+    def visit(self, node: LogicalOpExpr, parent_tree: Tree):
+        logical_node = parent_tree.add(f'LogicalOpExpr: {node.op}')
+        node.left.visit(self, logical_node.add('Left'))
+        node.right.visit(self, logical_node.add('Right'))
+
+    #nuevo
+    def visit(self, node: Grouping, parent_tree: Tree):
+        grouping_node = parent_tree.add('Grouping')
+        node.expr.visit(self, grouping_node)
+
+    #nuevo
+    def visit(self, node: PreInc, parent_tree: Tree):
+        parent_tree.add(f'PreInc: {node.name}')
+
+    # Método para PreDec
+    def visit(self, node: PreDec, parent_tree: Tree):
+        parent_tree.add(f'PreDec: {node.name}')
+
+    # Método para PostInc
+    def visit(self, node: PostInc, parent_tree: Tree):
+        parent_tree.add(f'PostInc: {node.name}')
+
+    # Método para PostDec
+    def visit(self, node: PostDec, parent_tree: Tree):
+        parent_tree.add(f'PostDec: {node.name}')
+
+    #nuevo
+    def visit(self, n: Set, parent_tree: Tree):
+        node = parent_tree.add(f"Set: {n.ident}")
+        self.visit(n.obj, node)
+        self.visit(n.value, node)
+
+    def visit(self, n: Get, parent_tree: Tree):
+        node = parent_tree.add(f"Get: {n.ident}")
+        self.visit(n.obj, node)
+
+    def visit(self, n: This, parent_tree: Tree):
+        parent_tree.add("This")
+
+    def visit(self, n: Super, parent_tree: Tree):
+        node = parent_tree.add(f"Super: {n.ident}")
+        self.visit(n.obj, node)
+        
+    def visit(self, n: CompoundAssignmentExpr, parent_tree: Tree):
+        """
+        Representa una asignación compuesta en el árbol de representación.
+        """
+        compound_node = parent_tree.add(f'CompoundAssignment: {n.ident} {n.opr}')
+        n.expr.accept(self, compound_node)
+        
+    def visit(self, n: SuperAccess, parent_tree: Tree):
+        parent_tree.add(f"SuperAccess: {n.ident}")
+    
+    def visit(self, n: SuperMethodCall, parent_tree: Tree):
+        super_call_node = parent_tree.add(f"SuperCall: {n.ident}")
+        args_node = super_call_node.add("Arguments")
+        for arg in n.args:
+            arg.accept(self, args_node)
+
+
+
     
     def render(self, root_node):
         tree = Tree("AST")

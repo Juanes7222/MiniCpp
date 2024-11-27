@@ -1,90 +1,61 @@
-// Draw a nice Mandelbrot set!
+/*class Animal {
+    private string name;
+    private int age;
 
-int br[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-float xmin;
-float xmax;
-float ymin;
-float ymax;
-float width;
-float height;
-int threshhold;
-
-bool band = true;
-int ar[8];
-
-bool in_mandelbrot(float x0, float y0, int n) {
-  float x;
-  float y;
-  float xtemp;
-  int h;
-  x = 10.4;
-  printf("hola mundo %f", x);
-  x++;
-  h=0;
-  h--;
-  --h;
-  h++;
-  ++h;
-
-  y += x;
-  y -= x;
-  y *= x;
-  y /= x;
-  
-  x = 0.0;
-  y = 0.0;
-  
-  while (n > 0) {
-    xtemp = x*x - y*y + x0;
-    y = 2.0*x*y + y0;
-    x = xtemp;
-    n = n - 1;
-    if (x*x + y*y > 4.0) {
-      return false;
+    public void setName(string newName) {
+        this.name = newName;
     }
-  }
-  return true;
-}
 
-void mandel(void) {
-  float dx;
-  float dy;
-
-  float y;
-  float x;
-
-
-  dx = (xmax - xmin)/width;
-  dy = (ymax - ymin)/height;
-
-  y = ymax;
-  
-  while (y >= ymin) {
-    x = xmin;
-
-    while (x < xmax) {
-      if (in_mandelbrot(x, y, threshhold)) {
-        printf("*");
-      } else {
-        printf(".");
-      }
-      x = x + dx;
+    public void setAge(int newAge) {
+        this.age = newAge;
     }
-    printf("\n");
-    y = y - dy;
-         
-  }
+
+    public string getName() {
+        return this.name;
+    }
+
+    public int getAge() {
+        return this.age;
+    }
+
+    public void printInfo() {
+        printf("Animal Info: Name = %s, Age = %d\\n", this.name, this.age);
+    }
 }
 
-void main(void) {
-  xmin = -2.0;
-  xmax = 1.0;
-  ymin = -1.5;
-  ymax = 1.5;
-  width = 80.0;
-  height = 40.0;
-  threshhold = 1000;
+class Dog : Animal {
+    private string breed;
 
-  mandel();
+    public void setBreed(string newBreed) {
+        this.breed = newBreed;
+    }
+
+    public void printInfo() {
+        super.printInfo();  // Llama al método printInfo de Animal
+        printf("Breed = %s\\n", this.breed);
+    }
 }
 
+int factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}*/
+
+int main() {
+    
+    Animal a = new Animal();
+    a.setName("Buddy");
+    a.setAge(3);
+    a.printInfo();
+
+    Dog d = new Dog();
+    d.setName("Charlie");
+    d.setAge(2);
+    d.setBreed("Golden Retriever");
+    d.printInfo();
+
+    return 0;
+}

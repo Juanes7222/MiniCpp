@@ -19,7 +19,8 @@ import re
 from collections import ChainMap  # Tabla de Simbolos
 from typing import Union
 from mccast import *
-from mctypesys import check_unary_op, check_binary_op
+from mctypesys import check_unary_op, check_binary_op, loockup_type
+from mctypes import *
 
 
 class CheckError(Exception):
@@ -119,6 +120,21 @@ class Checker(Visitor):
 
         matches = re.findall(r'%[dfs]', format_string)
         return [type_map[m] for m in matches]
+    
+    def _check_property(self, class_: ClassDeclStmt, property_name):
+        # Verificar que la propiedad existe en la clase
+        for property in class_.properties:
+            if property_name == property.ident:
+                return property      
+        raise CheckError(f"La propiedad '{property_name}' no está definida en la clase '{class_.ident}'")
+    
+    def _check_method(self, class_: ClassDeclStmt, method_name):
+        
+        for method in class_.methods:
+            if method_name == method.ident:
+                return method
+        raise CheckError(f"El metodo '{method_name}' no está definida en la clase '{class_.ident}'")
+        
 
     # Declarations
 
@@ -248,6 +264,8 @@ class Checker(Visitor):
         elif isinstance(n.value, float):
             return 'float'
         elif isinstance(n.value, str):
+            if len(n.value) == 1:
+                return 'char'
             return 'string'
         elif n.value is None:
             return "null"
@@ -350,19 +368,43 @@ class Checker(Visitor):
             interp.ctxt.error(n, str(err))
             
     def visit(self, n: CompoundAssignmentExpr, env: ChainMap, interp):
-        # Verificar que la variable esté definida
-        var_type = n.ident.accept(self, env, interp)
-        
-        # Verificar el tipo de la expresión del lado derecho
-        expr_type = n.expr.accept(self, env, interp)
+        """
+        Maneja expresiones de asignación compuesta, como 'x += 5'.
+        """
+        # Verificar que la variable está definida
+        if n.ident.ident not in env:
+            raise CheckError(f"La variable '{n.ident}' no está definida")
 
-        # Validar la operación usando la función `check_binary_op` para tipos compatibles
-        result_type = check_binary_op(n.opr, var_type, expr_type)
-        if result_type is None:
+        # Obtener el tipo de la variable
+        var_type = env[n.ident.ident].type_
+        if not var_type:
+            raise CheckError(f"No se puede determinar el tipo de la variable '{n.ident.ident}'")
+
+        # Evaluar la expresión a la derecha del operador compuesto
+        right_type = n.expr.accept(self, env, interp)
+        if not right_type:
+            raise CheckError(f"No se puede determinar el tipo de la expresión en '{n.expr}'")
+
+        # Validar la compatibilidad del operador y los tipos
+        result_type = check_binary_op(n.opr[0], var_type, right_type)  # El operador compuesto usa la primera parte (e.g., '+' en '+=')
+        if not result_type:
             raise CheckError(
-                f"Incompatibilidad de tipos: '{var_type}' no es compatible con '{expr_type}' para la operación '{n.opr}'"
+                f"Incompatibilidad de tipos en '{n.ident} {n.opr} ...': "
+                f"'{var_type}' y '{right_type}' no son compatibles"
             )
+
+        # Actualizar el valor de la variable en el entorno
+        var_value = env[n.ident.ident].expr.value
+        if isinstance(n.expr, ConstExpr):
+            expr_value = n.expr.value
+        else:
+            expr_value = env[n.expr.ident].expr.value
+        new_value = eval(f"{var_value} {n.opr[0]} {expr_value}")  # Aplica la operación
+        env[n.ident.ident] = VarDeclStmt(ident=n.ident.ident, type_=var_type, expr=ConstExpr(new_value))
+
+        # Retorna el tipo resultante de la operación
         return result_type
+
 
     def visit(self, n: CallExpr, env: ChainMap, interp):
         if n.func_name not in env:
@@ -378,4 +420,196 @@ class Checker(Visitor):
 
         for arg in n.args:
             arg.accept(self, env, interp)
+            
+        return env[n.func_name].type_
+            
+    def visit(self, n: ClassDeclStmt, env: ChainMap, interp):
+        # Verificar si la clase ya está declarada
+        if n.ident in env:
+            raise CheckError(f"La clase '{n.ident}' ya está definida")
 
+        # Resolver la clase base
+        base_class = None
+        if n.sclass:
+            if n.sclass not in env:
+                raise CheckError(f"La clase base '{n.sclass}' no está definida")
+            base_class = env[n.sclass]  # Recuperar la instancia de la clase base
+
+        # Crear el entorno de la clase
+        class_env = env.new_child()
+        class_env['this'] = n.ident
+        class_env[n.ident] = n
+
+        # Registrar las propiedades en el entorno de la clase
+        for prop in n.properties:
+            if prop.ident in class_env:
+                raise CheckError(f"La propiedad '{prop.ident}' ya está definida en la clase '{n.ident}'")
+            class_env[prop.ident] = prop
+            prop.accept(self, class_env, interp)
+
+        # Registrar los métodos en el entorno de la clase
+        for method in n.methods:
+            if method.ident in class_env:
+                raise CheckError(f"El método '{method.ident}' ya está definido en la clase '{n.ident}'")
+            class_env[method.ident] = method
+            method.accept(self, class_env, interp)
+
+        # Registrar la clase en el entorno global
+        env[n.ident] = n
+        
+    def visit(self, n: ClassMethodDecl, env: ChainMap, interp):
+        # Crear un entorno nuevo para los parámetros del método
+        method_env = env.new_child()
+        method_env["fun"] = n.type_
+
+        # Registrar los parámetros en el entorno del método
+        for param in n.params:
+            if param.ident in method_env:
+                raise CheckError(f"El parámetro '{param.ident}' ya está definido en el método '{n.name}'")
+            method_env[param.ident] = param
+
+        # Validar el cuerpo del método
+        n.body.accept(self, method_env, interp)
+
+    def visit(self, n: ClassPropertyDecl, env: ChainMap, interp):
+        # Verificar si el tipo es válido
+        if not loockup_type(n.type_):
+            raise CheckError(f"Tipo desconocido '{n.type_}' para la propiedad '{n.name}'")
+
+        # Verificar si el valor inicial es compatible con el tipo
+        if n.value:
+            value_type = n.value.accept(self, env, interp)
+            if not self.check_type_compatibility(n.type_, value_type):
+                raise CheckError(f"Incompatibilidad de tipos: '{n.type_}' y '{value_type}' en la inicialización de '{n.name}'")
+            
+    def visit(self, n: ClassArrayPropertyDecl, env: ChainMap, interp):
+        type_size = n.size.accept(self, env, interp)
+        if type_size != 'int':
+            raise CheckError(f"Tamaño invalido para arreglo {n.ident}: int --> {type_size}")
+        
+        if len(n.values) > 0:
+            if len(n.values) < n.size.value:
+                raise CheckError(f"Tamaño invalido para arreglo {n.ident}: int --> {type_size}")
+            
+        for value in n.values:
+            value_type = value.accept(self, env, interp)
+            if value_type != n.type_:
+                raise CheckError(f"Elemento invalido para arreglo {n.ident}: {n.type_} --> {value_type}")
+        
+        # Registrar el arreglo en el entorno
+        env[n.ident] = n
+
+
+    def visit(self, n: This, env: ChainMap, interp):
+        # Verificar que estamos dentro del contexto de una clase
+        if 'this' not in env:
+            raise CheckError("Uso de 'this' fuera del contexto de una clase")
+        return env['this']
+    
+    def visit(self, n: SuperAccess, env: ChainMap, interp):
+        # Verificar que estamos dentro de una clase derivada
+        if 'this' not in env:
+            raise CheckError("Uso de 'super' fuera del contexto de una clase")
+        
+        class_instance = env['this']
+        class_ = env[class_instance]
+        base_class = env.get(class_.sclass)
+
+        if not base_class:
+            raise CheckError(f"La clase '{class_instance.ident}' no tiene clase base")
+
+        # Verificar que el atributo existe en la clase base
+        property = self._check_property(base_class, n.ident)
+
+        return property.type_
+
+
+    def visit(self, n: SuperMethodCall, env: ChainMap, interp):
+        # Verificar que estamos dentro de una clase derivada
+        if 'this' not in env:
+            raise CheckError("Uso de 'super' fuera del contexto de una clase")
+        
+        class_instance = env['this']
+        class_ = env[class_instance]
+        base_class = env.get(class_.sclass)
+
+        if not base_class:
+            raise CheckError(f"La clase '{class_instance.ident}' no tiene clase base")
+
+        method = self._check_method(base_class, n.ident)
+
+        # Validar los argumentos del método
+        if len(n.args) != len(method.params):
+            raise CheckError(f"El método '{n.ident}' espera {len(method.params)} argumentos, pero se proporcionaron {len(n.args)}")
+        
+        for arg, param in zip(n.args, method.params):
+            arg_type = arg.accept(self, env, interp)
+            if not self.check_type_compatibility(param.type_, arg_type):
+                raise CheckError(f"Incompatibilidad de tipos en los argumentos del método '{n.name}'")
+
+        return method.type_
+
+    def visit(self, n: ClassInstanceCreation, env: ChainMap, interp):
+        # Verificar que la clase existe
+        if n.type_ not in env:
+            raise CheckError(f"La clase '{n.type_}' no está definida")
+
+        # Verificar que el constructor existe
+        class_type = env[n.type_]
+        
+        # Verificar que el nombre de la variable no esté definido en el entorno actual
+        if n.ident in env.maps[0]:
+            raise CheckError(f"El nombre '{n.ident}' ya está definido en este contexto")
+
+        # Registrar la variable en el entorno
+        env[n.ident] = n
+
+
+
+    def visit(self, n: Get, env: ChainMap, interp):
+        
+        obj_name = n.obj.accept(self, env, interp)
+        obj_type = env[obj_name]
+
+        # Verificar que el objeto es una clase válida
+        property = self._check_property(obj_type, n.ident)
+
+        # Verificar el acceso a la propiedad
+        property_access = property.access
+        if property_access == 'private' and env.get('this') != obj_name:
+            raise CheckError(f"Acceso privado a la propiedad '{n.ident}' no permitido")
+        return property.type_
+    
+    def visit(self, n: Set, env: ChainMap, interp):
+        obj_name = n.obj.accept(self, env, interp)
+        obj_type = env[obj_name]
+        # Verificar que el objeto es una clase válida
+
+        property = self._check_property(obj_type, n.ident)
+        # Verificar el acceso a la propiedad
+        property_access = property.access
+        if property_access == 'private' and env.get('this') != obj_name:
+            raise CheckError(f"Acceso privado a la propiedad '{n.ident}' no permitido")
+
+        # Verificar compatibilidad de tipos
+        value_type = n.value.accept(self, env, interp)
+        property_type = property.type_
+        if not self.check_type_compatibility(property_type, value_type):
+            raise CheckError(f"Incompatibilidad de tipos: '{property_type}' y '{value_type}' en la asignación a '{n.ident}'")
+
+    def visit(self, n: CallMethod, env: ChainMap, interp):
+        obj_name = n.obj.accept(self, env, interp)
+        
+        obj_type = env[obj_name]
+
+        method = self._check_method(obj_type, n.ident)
+        # Validar argumentos
+        if len(n.args) != len(method.params):
+            raise CheckError(f"El método '{n.ident}' espera {len(method.params)} argumentos, pero se proporcionaron {len(n.args)}")
+
+        for i, (arg, param) in enumerate(zip(n.args, method.params)):
+            arg_type = arg.accept(self, env, interp)
+            if not self.check_type_compatibility(param.type_, arg_type):
+                raise CheckError(f"Tipo incompatible en el argumento {i + 1} para el método '{n.ident}'")
+
+        return method.type_

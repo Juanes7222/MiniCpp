@@ -8,15 +8,15 @@ class Lexer(sly.Lexer):
 
     tokens = (
         # Palabras reservadas
-        "CHAR", "VOID", "BOOL", "INT", "FLOAT", "IF", "ELSE", "FOR", "WHILE",
-        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW", "SIZE",
+        "CHAR", "VOID", "BOOL", "INT", "FLOAT", "STRING", "IF", "ELSE", "FOR", "WHILE", "CLASS", "THIS", "SUPER",
+        "RETURN", "BREAK", "CONTINUE", "NOT", "NEW", "SIZE", "PRIVATE", "PUBLIC", "PROTECTED",
 
         # Operadores de Relacion
         "AND", "OR", "EQ", "NE", "GE", "LE",
         
 
         #Otros simbolos
-        "IDENT", "STRING", "BOOL_LIT", "INT_LIT", "FLOAT_LIT", "CHAR_LIT",
+        "IDENT", "STRING_LIT", "BOOL_LIT", "INT_LIT", "FLOAT_LIT", "CHAR_LIT",
         "INCREMENT", "DECREMENT",
         "PLUSEQ", "MINUSEQ", "MULTEQ", "DIVEQ",
         "NULL"
@@ -62,6 +62,7 @@ class Lexer(sly.Lexer):
     IDENT["int"] = "INT"
     IDENT["float"] = "FLOAT"
     IDENT["char"] = "CHAR"
+    IDENT["string"] = "STRING"
     IDENT["if"] = "IF"
     IDENT["else"] = "ELSE"
     IDENT["for"] = "FOR"
@@ -75,10 +76,16 @@ class Lexer(sly.Lexer):
     IDENT["not"] = "NOT"
     IDENT["true"] = "BOOL_LIT"
     IDENT["false"] = "BOOL_LIT"
+    IDENT["private"] = "PRIVATE"
+    IDENT["public"] = "PUBLIC"
+    IDENT["protected"] = "PROTECTED"
+    IDENT["class"] = "CLASS"
+    IDENT["this"] = "THIS"
+    IDENT["super"] = "SUPER"
     # IDENT[""] = ""
     
     @_(r'"(?:[^\"\\]|\\.)*"')
-    def STRING(self, t):
+    def STRING_LIT(self, t):
         tstr = t.value.replace('\\', '')
         m = re.search(r'\\[^\n]', tstr)
         if m:
@@ -109,6 +116,7 @@ class Lexer(sly.Lexer):
     
     @_(r"'[^']'")
     def CHAR_LIT(self, t):
+        t.value = t.value.replace("'", "")
         return t
 
     def error(self, token):
