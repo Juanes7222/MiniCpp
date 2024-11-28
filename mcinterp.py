@@ -7,8 +7,8 @@ from rich import print
 
 from mccast import *
 from mchecker import Checker
-from mcbuiltins import builtins, consts, CallError
-from mctypes import CObject, Number, String, Bool, Nil, Array
+from mcbuiltins import builtins, consts, Scanf
+from mctypesys import check_binary_op, check_unary_op
 
 
 # Veracidad en MiniC
@@ -131,7 +131,7 @@ class Interpreter(Visitor):
         if isinstance(left, (int, float)) and isinstance(right, (int, float)):
             return True
         else:
-            self.error(node, f"En '{node.op}' los operandos deben ser numeros")
+            self.error(node, f"En '{node.opr}' los operandos deben ser numeros")
 
     def _check_numeric_operand(self, node, value):
         if isinstance(value, (int, float)):
@@ -163,14 +163,7 @@ class Interpreter(Visitor):
             pass
         
     def call(self, func: Function, *args):
-        """
-        Invoca una función definida en el entorno actual.
-        """
-        # Buscar la función en el entorno
-        # if function_name not in self.env:
-        #     raise RuntimeError(f"La función '{function_name}' no está definida")
         
-        # func = self.env[function_name]
         if not isinstance(func, Function):
             raise RuntimeError(f"'{func.node.ident}' no es una función válida")
 
@@ -178,133 +171,7 @@ class Interpreter(Visitor):
         return func(self, *args)
     # Declarations
 
-    # def visit(self, node: ClassDeclStmt):
-    #     if node.sclass:
-    #         sclass = node.sclass.accept(self)
-    #         env = self.env.new_child()
-    #         env['super'] = sclass
-    #     else:
-    #         sclass = None
-    #         env = self.env
-    #     methods = {}
-    #     for meth in node.methods:
-    #         methods[meth.ident] = Function(meth, env)
-    #     cls = Class(node.ident, sclass, methods)
-    #     self.env[node.ident] = cls
-
-    # def visit(self, node: FunctDeclStmt):
-    #     func = Function(node, self.env)
-    #     self.env[node.ident] = func
-
-    def visit(self, node: VarDeclStmt):
-        if node.expr:
-            expr = node.expr.accept(self)
-        else:
-            expr = None
-        self.env[node.ident] = expr
-
-    # Statements
-
-    def visit(self, node: CompoundStmt):
-        self.env = self.env.new_child()
-        for stmt in node.stmts:
-            stmt.accept(self)
-        self.env = self.env.parents
-
-    def visit(self, node: Print):
-        expr = node.expr.accept(self)
-        if isinstance(expr, str):
-            expr = expr.replace('\\n', '\n')
-            expr = expr.replace('\\t', '\t')
-        print(expr, end='')
-
-    def visit(self, node: WhileStmt):
-        while _is_truthy(node.expr.accept(self)):
-            try:
-                node.stmt.accept(self)
-            except BreakException:
-                return
-            except ContinueException:
-                raise NotImplementedError
-
-    def visit(self, node: IfStmt):
-        expr = node.expr.accept(self)
-        if _is_truthy(expr):
-            node.then_stmt.accept(self)
-        elif node.else_stmt:
-            node.else_stmt.accept(self)
-
-    def visit(self, node: BreakStmt):
-        raise BreakException()
-
-    def visit(self, node: ContinueStmt):
-        raise ContinueException()
-
-    def visit(self, node: ReturnStmt):
-        # Ojo: node.expr es opcional
-        value = 0 if not node.expr else node.expr.accept(self)
-        raise ReturnException(value)
-
-    def visit(self, node: ExprStmt):
-        node.expr.accept(self)
-
-    # Expressions
-
-    def visit(self, node: ConstExpr):
-        return node.value
-
-    def visit(self, node: BinaryOpExpr):
-        left = node.left.accept(self)
-        right = node.right.accept(self)
-
-        if node.op == '+':
-            (isinstance(left, str) and isinstance(right, str)
-             ) or self._check_numeric_operands(node, left, right)
-            return left + right
-
-        elif node.op == '-':
-            self._check_numeric_operands(node, left, right)
-            return left - right
-
-        elif node.op == '*':
-            self._check_numeric_operands(node, left, right)
-            return left * right
-
-        elif node.op == '/':
-            self._check_numeric_operands(node, left, right)
-            if isinstance(left, int) and isinstance(right, int):
-                return left // right
-
-            return left / right
-
-        elif node.op == '%':
-            self._check_numeric_operands(node, left, right)
-            return left % right
-
-        elif node.op == '==':
-            return left == right
-
-        elif node.op == '!=':
-            return left != right
-
-        elif node.op == '<':
-            self._check_numeric_operands(node, left, right)
-            return left < right
-
-        elif node.op == '>':
-            self._check_numeric_operands(node, left, right)
-            return left > right
-
-        elif node.op == '<=':
-            self._check_numeric_operands(node, left, right)
-            return left <= right
-
-        elif node.op == '>=':
-            self._check_numeric_operands(node, left, right)
-            return left >= right
-
-        else:
-            raise NotImplementedError(f"Mal operador {node.op}")
+    
 
  
 
@@ -338,7 +205,7 @@ class Interpreter(Visitor):
             decl.accept(self)
         for stmt in node.stmts:
             stmt.accept(self)
-        self.env = self.env.parents
+        # self.env = self.env.parents
 
     def visit(self, node: ExprStmt):
         node.expr.accept(self)
@@ -411,28 +278,36 @@ class Interpreter(Visitor):
     def visit(self, node: BinaryOpExpr):
         left = node.left.accept(self)
         right = node.right.accept(self)
+        current_name = None
+        if isinstance(node.left, VarAssignmentExpr):
+            current_name = node.left.ident
+        elif isinstance(node.right, VarAssignmentExpr):
+            current_name = node.right.ident
         if node.opr == "+":
-            return left + right
+            value = left + right
         elif node.opr == "-":
-            return left - right
+            value = left - right
         elif node.opr == "*":
-            return left * right
+            value =  left * right
         elif node.opr == "/":
-            return left / right
+            value = left / right
         elif node.opr == "==":
-            return left == right
+            value = left == right
         elif node.opr == "!=":
-            return left != right
+            value = left != right
         elif node.opr == "<":
-            return left < right
+            value = left < right
         elif node.opr == ">":
-            return left > right
+            value = left > right
         elif node.opr == "<=":
-            return left <= right
+            value = left <= right
         elif node.opr == ">=":
-            return left >= right
+            value = left >= right
         else:
             raise NotImplementedError(f"Operador desconocido {node.opr}")
+        if current_name:
+            self.env[current_name] = value
+        return value
 
     def visit(self, node: LogicalOpExpr):
         left = node.left.accept(self)
@@ -446,17 +321,41 @@ class Interpreter(Visitor):
     def visit(self, node: UnaryOpExpr):
         value = node.expr.accept(self)
         if node.opr == "-":
+            self.env[node.expr.ident] += -value
             return -value
         elif node.opr == "!":
+            self.env[node.expr.ident] += not _is_truthy(value)
             return not _is_truthy(value)
+        elif node.opr == "++":
+            self.env[node.expr.ident] += 1
+            return value + 1
+        elif node.opr == "--":
+            self.env[node.expr.ident] -= 1
+            return value - 1
         else:
             raise NotImplementedError(
                 f"Operador unario desconocido {node.opr}")
 
     def visit(self, node: CallExpr):
+        # Obtener la función del entorno
         func = self.env[node.func_name]
+        
+        # Si la función es scanf, maneja los argumentos de manera especial
+        if isinstance(func, Scanf):
+            # El primer argumento (el formato) se evalúa normalmente
+            format_arg = node.args[0].accept(self)
+            
+            # Los siguientes argumentos son nombres de variables (referencias)
+            var_args = [arg.ident for arg in node.args[1:] if isinstance(arg, VarExpr)]
+            
+            # Llama a scanf pasando el entorno y las variables
+            return func(self.env, format_arg, *var_args)
+        
+        # Para otras funciones, evalúa los argumentos normalmente
         args = [arg.accept(self) for arg in node.args]
         return func(self, *args)
+
+
 
     def visit(self, node: ArrayLoockupExpr):
         array = self.env[node.ident]
@@ -509,4 +408,7 @@ class Interpreter(Visitor):
         if constructor:
             # Llamar al constructor con un entorno ligado a la instancia
             constructor.bind(instance).call([])
+            
+    def visit(self, n: NullStmt):
+        pass
 

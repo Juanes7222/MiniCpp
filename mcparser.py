@@ -23,11 +23,12 @@ class Parser(sly.Parser):
         ('left', '*', '/', '%'),
         ('right', "="),
         ('left', 'CHAR', 'FLOAT', 'INT', 'BOOL', 'VOID'),
-        ('left', 'IDENT'),
+        ('right', 'IDENT'),
         ('right', "UMINUS", "!"),
         ('right', 'ELSE'),
         ('right', 'INCREMENT', 'DECREMENT'),
-        ('right', 'PLUSEQ', 'MINUSEQ', 'MULTEQ', 'DIVEQ')
+        ('right', 'PLUSEQ', 'MINUSEQ', 'MULTEQ', 'DIVEQ'),
+        ('right', 'NEW')
     )
     # Definir las Reglas de la gramática
 
@@ -114,7 +115,10 @@ class Parser(sly.Parser):
 
     @_("local_decl local_decls")
     def local_decls(self, p):
+        if isinstance(p.local_decl, list):
+            return p.local_decl + p.local_decls
         return [p.local_decl] + p.local_decls
+        
 
     @_("empty")
     def local_decls(self, p):
@@ -127,30 +131,57 @@ class Parser(sly.Parser):
     @_("empty")
     def stmt_list(self, p):
         return []
+    
+    # @_('IDENT IDENT "=" expr ";"')
+    # def local_decl(self, p):
+    #     return ClassInstanceCreation(
+    #         type_=p.IDENT0,  # Nombre de la clase
+    #         ident=p.IDENT1,   # Nombre de la variable
+    #         constructor=p.IDENT2  # Constructor
+    #     )
 
-    @_("type_spec IDENT ';'")
-    def local_decl(self, p):
-        return VarDeclStmt(p.IDENT, p.type_spec)
+    # @_("type_spec IDENT ';'")
+    # def local_decl(self, p):
+    #     return VarDeclStmt(p.IDENT, p.type_spec)
     
-    @_("type_spec IDENT '=' expr ';'")
+    # @_("type_spec IDENT '=' expr ';'")
+    # def local_decl(self, p):
+    #     return VarDeclStmt(p.IDENT, p.type_spec, p.expr)
+    
+    @_('type_spec decl_list ";"')
     def local_decl(self, p):
-        return VarDeclStmt(p.IDENT, p.type_spec, p.expr)
+        decls = []
+        for decl in p.decl_list:
+            if isinstance(decl, NewArrayExpr):
+                decls.append(NewArrayExpr(p.type_spec, ident=decl.ident, size_expr=decl.size_expr, value=decl.value))
+            else:
+                decls.append(VarDeclStmt(type_=p.type_spec, ident=decl.ident, expr=decl.expr))
+        return decls
 
-    @_("type_spec IDENT '[' expr ']' ';'")
-    def local_decl(self, p):
-        return NewArrayExpr(p.type_spec, p.IDENT, p.expr)
+    @_('decl_list "," l_decl')
+    def decl_list(self, p):
+        return p.decl_list + [p.l_decl]
+
+    @_('l_decl')
+    def decl_list(self, p):
+        return [p.l_decl]
+
+    @_('IDENT "=" expr')
+    def l_decl(self, p):
+        return VarDeclStmt(type_=None, ident=p.IDENT, expr=p.expr)
     
-    @_("type_spec IDENT '[' expr ']' '=' '{' expr_list '}' ';'")
-    def local_decl(self, p):
-        return NewArrayExpr(p.type_spec, p.IDENT, p.expr, p.expr_list)
+    @_("IDENT '[' expr ']'")
+    def l_decl(self, p):
+        return NewArrayExpr(type_=None, ident=p.IDENT, size_expr=p.expr)
     
-    @_('IDENT IDENT "=" NEW IDENT "(" ")" ";"')
-    def local_decl(self, p):
-        return ClassInstanceCreation(
-            type_=p.IDENT0,  # Nombre de la clase
-            ident=p.IDENT1,   # Nombre de la variable
-            constructor=p.IDENT2  # Constructor
-        )
+    @_("IDENT '[' expr ']' '=' '{' expr_list '}'")
+    def l_decl(self, p):
+        return NewArrayExpr(type_=None, ident=p.IDENT, size_expr=p.expr, value=p.expr_list)
+
+    @_('IDENT')
+    def l_decl(self, p):
+        return VarDeclStmt(type_=None, ident=p.IDENT, expr=None)
+
     
     @_("expr")
     def expr_list(self, p):
@@ -176,13 +207,14 @@ class Parser(sly.Parser):
     def while_stmt(self, p):
         return WhileStmt(p.expr, p.stmt)
 
-    @_("FOR '(' for_init_stmt ';' [ expr ] ';' [ expr ] ')' stmt")
+    @_("FOR '(' for_init_stmt [ expr ] ';' [ expr ] ')' stmt")
     def for_stmt(self, p):
         return ForStmt(p.for_init_stmt, p.expr0, p.expr1, p.stmt)
 
-    @_("var_decl")
+    
+    @_("type_spec IDENT '=' expr ';'")
     def for_init_stmt(self, p):
-        return p.var_decl
+        return VarDeclStmt(ident=p.IDENT, type_=p.type_spec, expr=p.expr)
 
     @_("expr_stmt")
     def for_init_stmt(self, p):
@@ -286,18 +318,17 @@ class Parser(sly.Parser):
         else:
             return ConstExpr(value=str(p[0]))
 
-    @_("NEW type_spec '[' expr ']'")
+    @_("NEW IDENT '(' ')'")
     def expr(self, p):
-        return NewArrayExpr(p.type_spec, p.expr)
+        return p.IDENT
     
-    @_('expr "." IDENT')
+    @_('IDENT "." IDENT')
     def expr(self, p):
-        return Get(obj=p.expr, name=p.IDENT)
+        return Get(obj=p.expr, ident=p.IDENT)
     
-    @_('expr "." IDENT "(" args ")"')
+    @_('IDENT "." IDENT "(" args ")"')
     def expr(self, p):
         return CallMethod(obj=p.expr, ident=p.IDENT, args=p.args)
-
 
     @_("arg_list")
     def args(self, p):

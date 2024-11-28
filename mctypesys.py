@@ -18,6 +18,8 @@ punto de partida.
 
 Puede volver y refactorizar el sistema de tipos mas tarde.
 '''
+
+import re
 # Conjunto valido de typenames
 typenames = {'int', 'float', 'bool', 'null', 'char', 'string'}
 
@@ -84,6 +86,24 @@ _unary_ops = {
     ('!', 'bool') : 'bool',
 }
 
+type_map = {
+            '%d': 'int',
+            '%f': 'float',
+            '%F': 'float',
+            '%e': 'float',
+            '%E': 'float',
+            '%a': 'float',
+            '%A': 'float',
+            '%g': 'float',
+            '%G': 'float',
+            '%s': 'string',
+            '%c': "char",
+            '%o': 'int',
+            '%x': 'int',
+            '%X': 'int',
+            '%u': 'int',
+        }
+
 def loockup_type(name):
     '''
     Dado el nombre de un tipo primitivo, se busca el objeto "type" apropiado.
@@ -108,3 +128,7 @@ def check_unary_op(op, expr):
     resultante or None si no es soportado
     '''
     return _unary_ops.get((op, expr))
+
+def _parse_format_string(format_string):        
+    matches = re.findall(r'%[dfs]', format_string)
+    return [type_map[m] for m in matches]

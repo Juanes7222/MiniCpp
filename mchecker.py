@@ -19,7 +19,7 @@ import re
 from collections import ChainMap  # Tabla de Simbolos
 from typing import Union
 from mccast import *
-from mctypesys import check_unary_op, check_binary_op, loockup_type
+from mctypesys import check_unary_op, check_binary_op, loockup_type, _parse_format_string
 from mctypes import *
 
 
@@ -65,7 +65,7 @@ class Checker(Visitor):
                 "El primer argumento de printf debe ser una cadena de formato")
 
         format_string = n.args[0].value
-        expected_types = self._parse_format_string(format_string)
+        expected_types = _parse_format_string(format_string)
 
         if len(expected_types) != len(n.args) - 1:
             raise CheckError(f"printf espera {len(
@@ -85,7 +85,7 @@ class Checker(Visitor):
                 "El primer argumento de scanf debe ser una cadena de formato")
 
         format_string = n.args[0].value
-        expected_types = self._parse_format_string(format_string)
+        expected_types = _parse_format_string(format_string)
 
         if len(expected_types) != len(n.args) - 1:
             raise CheckError(f"scanf espera {len(
@@ -98,28 +98,6 @@ class Checker(Visitor):
             arg_type = n.args[i].accept(self, env, interp)
             if arg_type != expected_type:
                 raise CheckError(f"Argumento {i} de scanf debe ser de tipo {expected_type}, pero se encontró {arg_type}")
-
-    def _parse_format_string(self, format_string):
-        type_map = {
-            '%d': 'int',
-            '%f': 'float',
-            '%F': 'float',
-            '%e': 'float',
-            '%E': 'float',
-            '%a': 'float',
-            '%A': 'float',
-            '%g': 'float',
-            '%G': 'float',
-            '%s': 'string',
-            '%c': "char",
-            '%o': 'int',
-            '%x': 'int',
-            '%X': 'int',
-            '%u': 'int',
-        }
-
-        matches = re.findall(r'%[dfs]', format_string)
-        return [type_map[m] for m in matches]
     
     def _check_property(self, class_: ClassDeclStmt, property_name):
         # Verificar que la propiedad existe en la clase

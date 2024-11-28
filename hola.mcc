@@ -1,13 +1,79 @@
 
-int main(){
-    // Imprimimos una cadena
-    int j;
-    int i = null;
+// Pruebas de declaración de variables y expresiones básicas
+int x = 10;
+float y = 3.14;
+bool z = true;
+string message = "Hello, MiniC!";
+char initial = 'M';
 
-    i += j;
-    i -= j;
-    i *= j;
-    i /= j;
-    i /= 1;
-    return 0;
+printf("Variables iniciales: x=%d, y=%.2f, z=%s, message=%s, initial=%c\n", x, y, z, message, initial);
+
+// Operaciones aritméticas y lógicas
+x = x + 5;
+y = y * 2;
+z = !z;
+
+printf("Después de operaciones: x=%d, y=%.2f, z=%s\n", x, y, z);
+
+// Prueba de bucles
+int sum = 0;
+for (int i = 0; i < 5; i = i + 1) {
+    sum = sum + i;
+    printf("i=%d, sum=%d\n", i, sum);
 }
+
+printf("Resultado final del bucle: sum=%d\n", sum);
+
+// Declaraciones condicionales
+if (x > 10) {
+    printf("x es mayor que 10\n");
+} else {
+    printf("x es menor o igual a 10\n");
+}
+
+// Funciones
+int factorial(int n) {
+    if (n == 0 || n == 1) {
+        return 1;
+    } else {
+        return n * factorial(n - 1);
+    }
+}
+
+int result = factorial(5);
+printf("Factorial de 5: %d\n", result);
+
+// Bucle while
+int counter = 0;
+while (counter < 3) {
+    printf("Contador en while: %d\n", counter);
+    counter = counter + 1;
+}
+
+// Operadores ++ y --
+int a = 5;
+int b = 5;
+
+a++;
+b--;
+
+printf("Operadores ++ y --: a=%d, b=%d\n", a, b);
+
+// Operadores de asignación compuesta
+a += 10;
+b -= 2;
+
+printf("Asignación compuesta: a=%d, b=%d\n", a, b);
+
+// Evaluación de circuito corto
+bool short_circuit = (x > 20) && (a = a + 5); // No se evalúa el lado derecho
+printf("Evaluación de circuito corto: short_circuit=%s, a=%d\n", short_circuit, a);
+
+short_circuit = (x < 20) || (b = b + 10); // No se evalúa el lado derecho
+printf("Evaluación de circuito corto: short_circuit=%s, b=%d\n", short_circuit, b);
+
+// Finalización del programa
+printf("Prueba básica completada.\n");
+
+int main(){
+};

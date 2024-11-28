@@ -1,9 +1,10 @@
 # stdlib.py
 from abc     import ABC, abstractmethod
 from pathlib import Path
+from mctypesys import _parse_format_string
 
 import math
-import statistics
+import re
 import time
 
 
@@ -339,17 +340,56 @@ class Scanf(BuiltinFunction):
 
     @property
     def arity(self) -> int:
+        # scanf permite cualquier cantidad de argumentos
         return -1
 
-    def __call__(self, _, *args):
+    def __call__(self, env, *args):
         if len(args) < 1:
             raise CallError("scanf necesita al menos un argumento")
-        prompt = args[0]
-        if not isinstance(prompt, str):
-            raise CallError("El argumento de scanf debe ser una cadena")
-        values = input(prompt).split()
-        return values if len(values) > 1 else values[0]
-      
+
+        # El primer argumento es el formato
+        format_string = args[0]
+        if not isinstance(format_string, str):
+            raise CallError("El primer argumento de scanf debe ser una cadena")
+
+        # Los argumentos restantes deben ser referencias a variables
+        variables = args[1:]
+        if not all(isinstance(var, str) and var in env for var in variables):
+            raise CallError("Los argumentos de scanf deben ser variables existentes")
+
+        # Leer entrada del usuario
+        types= _parse_format_string(format_string)
+        format_string = re.sub(r"%\w", "", format_string)
+        try:
+            user_input = input(format_string)
+        except EOFError:
+            raise CallError("Error al leer la entrada")
+
+        # Dividir entrada y asignar valores
+        input_values = user_input.split()
+        if len(input_values) != len(variables):
+            raise CallError("La cantidad de entradas no coincide con las variables")
+
+        for var, value, var_type in zip(variables, input_values, types):
+            # Convertir al tipo de la variable según su declaración en `env`
+
+            if var_type == 'int':
+                env[var] = int(value)
+            elif var_type == 'float':
+                env[var] = float(value)
+            elif var_type == 'bool':
+                env[var] = value.lower() in ('true', '1')
+            elif var_type == 'string':
+                env[var] = value
+            elif var_type == 'char':
+                if len(value) != 1:
+                    raise CallError(f"El valor para la variable '{var}' no es un carácter válido")
+                env[var] = value
+            else:
+                raise CallError(f"Tipo desconocido '{var_type}' para la variable '{var}'")
+
+        return None  # scanf no retorna valores
+
 class Printf(BuiltinFunction):
     _shortname = "printf"
 

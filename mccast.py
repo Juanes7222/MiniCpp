@@ -538,8 +538,11 @@ class RenderTree(Visitor):
         for arg in n.args:
             arg.accept(self, args_node)
 
+    def visit(self, n: ClassInstanceCreation, parent_tree: Tree):
+        parent_tree.add(f"Class Instance: {n.ident} type {n.type_}")
 
-
+    def visit(self, n: CallMethod, parent_tree: Tree):
+        parent_tree.add(f"Call Method: {n.obj} Object: {n.ident}")
     
     def render(self, root_node):
         tree = Tree("AST")
