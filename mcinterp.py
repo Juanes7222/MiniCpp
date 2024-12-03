@@ -117,6 +117,26 @@ class Instance:
 
     def set(self, name, value):
         self.data[name] = value
+        
+class Array:
+    def __init__(self, element_type, size, values=None):
+        self.element_type = element_type
+        self.size = size
+        self.values = values if values else [None] * size
+
+    def __getitem__(self, index):
+        if index < 0 or index >= self.size:
+            raise RuntimeError(f"Índice fuera de rango: {index}")
+        return self.values[index]
+
+    def __setitem__(self, index, value):
+        if index < 0 or index >= self.size:
+            raise RuntimeError(f"Índice fuera de rango: {index}")
+        self.values[index] = value
+
+    def __str__(self):
+        return f"Array<{self.element_type}>({self.values})"
+
 
 
 class Interpreter(Visitor):
@@ -170,10 +190,6 @@ class Interpreter(Visitor):
         # Llamar a la función con los argumentos proporcionados
         return func(self, *args)
     # Declarations
-
-    
-
- 
 
     def visit(self, node: Program):
         for stmt in node.stmts:
@@ -247,10 +263,6 @@ class Interpreter(Visitor):
         value = node.expr.accept(self) if node.expr else None
         raise ReturnException(value)
 
-    def visit(self, node: Print):
-        value = node.expr.accept(self)
-        print(value)
-
     def visit(self, node: ConstExpr):
         return node.value
 
@@ -308,15 +320,6 @@ class Interpreter(Visitor):
         if current_name:
             self.env[current_name] = value
         return value
-
-    def visit(self, node: LogicalOpExpr):
-        left = node.left.accept(self)
-        if node.op == "&&":
-            return left and node.right.accept(self)
-        elif node.op == "||":
-            return left or node.right.accept(self)
-        else:
-            raise NotImplementedError(f"Operador lógico desconocido {node.op}")
 
     def visit(self, node: UnaryOpExpr):
         value = node.expr.accept(self)
@@ -408,6 +411,56 @@ class Interpreter(Visitor):
         if constructor:
             # Llamar al constructor con un entorno ligado a la instancia
             constructor.bind(instance).call([])
+            
+    def visit(self, n: NewArrayExpr):
+        # Evaluar el tamaño del arreglo
+        size = n.size_expr.accept(self)
+        if not isinstance(size, int) or size <= 0:
+            raise RuntimeError(f"El tamaño del arreglo '{n.ident}' debe ser un entero positivo")
+
+        # Inicializar valores si están definidos
+        initial_values = None
+        if not isinstance(n.value, NullStmt):
+            initial_values = [val.accept(self) for val in n.value]
+            if len(initial_values) != size:
+                raise RuntimeError(f"El tamaño del arreglo '{n.ident}' no coincide con los valores iniciales")
+
+        # Crear el arreglo
+        array = Array(element_type=n.type_, size=size, values=initial_values)
+        self.env[n.ident] = array
+
+    def visit(self, n: ArrayLoockupExpr):
+        # Obtener el arreglo
+        array = self.env.get(n.ident)
+        if not isinstance(array, Array):
+            raise RuntimeError(f"'{n.ident}' no es un arreglo válido")
+
+        # Evaluar el índice
+        index = n.index.accept(self)
+        if not isinstance(index, int):
+            raise RuntimeError(f"El índice del arreglo '{n.ident}' debe ser un entero")
+
+        # Retornar el valor
+        return array[index]
+    
+    def visit(self, n: ArrayAssignmentExpr):
+        # Obtener el arreglo
+        array = self.env.get(n.array)
+        if not isinstance(array, Array):
+            raise RuntimeError(f"'{n.array}' no es un arreglo válido")
+
+        # Evaluar el índice
+        index = n.index.accept(self)
+        if not isinstance(index, int):
+            raise RuntimeError(f"El índice del arreglo '{n.array}' debe ser un entero")
+
+        # Evaluar el valor asignado
+        value = n.expr.accept(self)
+
+        # Asignar el valor
+        array[index] = value
+
+
             
     def visit(self, n: NullStmt):
         pass

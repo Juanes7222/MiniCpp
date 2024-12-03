@@ -1,52 +1,4 @@
-# mccast.py
-'''
-Estructura del AST (básica). 
 
-Debe agregar las clases que considere que hacen falta.
-
-Statement
- |
- +--- NullStmt
- |
- +--- ExprStmt
- |
- +--- IfStmt
- |
- +--- WhileStmt
- |
- +--- ReturnStmt
- |
- +--- BreakStmt
- |
- +--- FuncDeclStmt
- |
- +--- StaticVarDeclStmt
-
-
-Expression
- |
- +--- ConstExpr                literales bool, int y float
- |
- +--- NewArrayExpr             Arreglos recien creados
- |
- +--- CallExpr                 Llamado a function
- |
- +--- VarExpr                  Variable en lado-derecho
- |
- +--- ArrayLoockupExpr         Contenido celda arreglo
- |
- +--- UnaryOpExpr              Unarios !, +, -
- |
- +--- BinaryOpExpr             Binarios ||,&&,==,!=,<,<=,>,>=,+,-,*,/,%
- |
- +--- VarAssignmentExpr        var = expr
- |
- +--- ArrayAssignmentExpr      var[expr] = expr
- |
- +--- IntToFloatExpr           Ensanchar integer a un float
- |
- +--- ArraySizeExpr            tamaño de un arreglo
-'''
 from dataclasses import dataclass, field
 from multimethod import multimeta
 from typing      import Union, List, Dict
@@ -136,41 +88,6 @@ class StaticVarDeclStmt(Statement):
     type_: str
 
 
-#nuevo
-@dataclass
-class Print(Statement):
-    expr: Expression  
-
-#nuevo
-@dataclass
-class LogicalOpExpr(Expression):
-    left: Expression  
-    right: Expression  
-    op: str          
-
-#nuevo
-@dataclass
-class Grouping(Expression):
-    expr: Expression  
-
-#nuevo
-@dataclass
-class PreInc(Expression):
-    name: str  
-
-@dataclass
-class PreDec(Expression):
-    name: str 
-
-@dataclass
-class PostInc(Expression):
-    name: str  
-
-@dataclass
-class PostDec(Expression):
-    name: str  
-
-#nuevo
 @dataclass
 class Set(Expression):
     obj: Expression    
@@ -193,10 +110,7 @@ class This(Expression):
 class Super(Expression):
     ident: str          
     obj: Expression 
-    
-# =====================================================================
-# Clases Concretas
-# =====================================================================
+
 @dataclass
 class NullStmt(Statement):
     pass
@@ -261,10 +175,6 @@ class ArrayAssignmentExpr(Expression):
     expr: Expression
 
 @dataclass
-class IntToFloatExpr(Expression):
-    expr: Expression
-
-@dataclass
 class ArraySizeExpr(Expression):
     array: str
 
@@ -274,26 +184,21 @@ class VarDeclStmt(Statement):
     type_: str
     expr: Expression = field(default_factory=NullStmt)
 
-@dataclass
-class ArrayDeclStmt(Statement):
-    ident: str
-    type_: str
-    
 #nuevo
 @dataclass
 class ClassPropertyDecl(Statement):
-    ident: str                           # Nombre de la propiedad
-    type_: str                          # Tipo de la propiedad
-    access: str = "public"              # Especificador de acceso (por defecto, 'public')
-    value: Expression = field(default_factory=lambda: None)  # Valor inicial (opcional)
+    ident: str                           
+    type_: str                         
+    access: str = "public"              
+    value: Expression = field(default_factory=lambda: None)
     
 @dataclass
 class ClassArrayPropertyDecl(Statement):
-    ident: str                           # Nombre de la propiedad
-    type_: str                          # Tipo de la propiedad
+    ident: str                           
+    type_: str                          
     size: Expression
-    access: str = "public"              # Especificador de acceso (por defecto, 'public')
-    values: List[Expression] = field(default_factory=list)  # Valor inicial (opcional)
+    access: str = "public"              
+    values: List[Expression] = field(default_factory=list) 
 
 @dataclass
 class ClassMethodDecl(Statement):
@@ -321,18 +226,15 @@ class SuperMethodCall(Expression):
     
 @dataclass
 class ClassInstanceCreation(Statement):
-    type_: str  # Nombre de la clase
-    ident: str   # Nombre de la variable que contiene la instancia
-    constructor: str  # Constructor invocado (normalmente coincide con el nombre de la clase)
+    type_: str  
+    ident: str   
+    constructor: str  
 
 @dataclass
 class CallMethod(Expression):
-    """
-    Representa la llamada a un método en una instancia.
-    """
-    obj: Expression    # Objeto en el que se llama al método
-    ident: str          # Nombre del método
-    args: List[Expression]  # Argumentos de la llamada
+    obj: Expression    
+    ident: str          
+    args: List[Expression]  
 
 
 
@@ -360,9 +262,6 @@ class RenderTree(Visitor):
     def visit(self, n: StaticVarDeclStmt, parent_tree: Tree):
         parent_tree.add(f'Var: {n.ident}')
         
-    def visit(self, n: ArrayDeclStmt, parent_tree: Tree):
-        parent_tree.add(f'Array Declaration: {n.ident} {n.type_}')
-
     def visit(self, n: ExprStmt, parent_tree: Tree):
         expr_node = parent_tree.add(f'ExprStmt')
         n.expr.accept(self, expr_node)
@@ -430,6 +329,15 @@ class RenderTree(Visitor):
     def visit(self, n: NewArrayExpr, parent_tree: Tree):
         array_node = parent_tree.add(f'New Array: {n.type_} {n.ident} {n.value if not isinstance(n.value, NullStmt) else ""}')        
         n.size_expr.accept(self, array_node)
+        
+    def visit(self, n: ArrayLoockupExpr, parent_tree: Tree):
+        node = parent_tree.add(f"Array {n.ident} access")
+        n.index.accept(self, node)
+        
+    def visit(self, n: ArrayAssignmentExpr, parent_tree: Tree):
+        node = parent_tree.add(f"Assigment array {n.array}")
+        n.index.accept(self, node)
+        n.expr.accept(self, node)
             
     def visit(self, n: NullStmt, parent_tree: Tree):
         parent_tree.add(f'NullStmt')
@@ -472,40 +380,6 @@ class RenderTree(Visitor):
         parent_tree.add(f'ClassArrayProperty: {n.ident} (Type: {n.type_}, Size: {n.size}, Access: {n.access})')
 
 
-    
-    #nuevo
-    def visit(self, n: Print, parent_tree: Tree):
-        print_node = parent_tree.add('Print')
-        n.expr.accept(self, print_node)
-
-    #nuevo
-    def visit(self, node: LogicalOpExpr, parent_tree: Tree):
-        logical_node = parent_tree.add(f'LogicalOpExpr: {node.op}')
-        node.left.visit(self, logical_node.add('Left'))
-        node.right.visit(self, logical_node.add('Right'))
-
-    #nuevo
-    def visit(self, node: Grouping, parent_tree: Tree):
-        grouping_node = parent_tree.add('Grouping')
-        node.expr.visit(self, grouping_node)
-
-    #nuevo
-    def visit(self, node: PreInc, parent_tree: Tree):
-        parent_tree.add(f'PreInc: {node.name}')
-
-    # Método para PreDec
-    def visit(self, node: PreDec, parent_tree: Tree):
-        parent_tree.add(f'PreDec: {node.name}')
-
-    # Método para PostInc
-    def visit(self, node: PostInc, parent_tree: Tree):
-        parent_tree.add(f'PostInc: {node.name}')
-
-    # Método para PostDec
-    def visit(self, node: PostDec, parent_tree: Tree):
-        parent_tree.add(f'PostDec: {node.name}')
-
-    #nuevo
     def visit(self, n: Set, parent_tree: Tree):
         node = parent_tree.add(f"Set: {n.ident}")
         self.visit(n.obj, node)

@@ -48,25 +48,17 @@ int factorial(int n) {
 
 int main() {
 
-    int fact, o;
-    int counter = 0;
     int h[3], r[5], g[2] = {1, 2};
     int n = 8;
     int d;
+
+    for (int i=0;i<2;i++){
+        //printf("Dato %d: %d\n", i, g[i]);
+        h[i] = g[i];
+        printf("%d\t", h[i]);
+    }
     //fact = factorial(n);
     //printf("Factorial de %d es %d\n", n, fact);
-
-    while (counter < 3) {
-       printf("Contador en while: %d\n", counter);
-        counter += 1;
-    }
-
-    for (int i=0;i<4;i++){
-        printf("i = %d\n", i);
-    }
-
-    scanf("Ingrese dos numero: %d %d", d, n);
-    printf("d= %d\tn= %d", d, n);
 
 
 

@@ -24,7 +24,7 @@ from rich       import print
 
 from mclex      import print_lexer
 from mcparser   import gen_ast
-from mcontext   import Context
+from mcontext   import Context, print_symbol_table
 
 import argparse
 
@@ -86,25 +86,16 @@ if __name__ == '__main__':
       source = file.read()
 
     if args.lex:
-      flex = fname.split('.')[0] + '.lex'
-      print(f'print lexer: {flex}')
-      with open(flex, 'w', encoding='utf-8') as f:
-        with redirect_stdout(f):
-          print_lexer(source)
+      print_lexer(source)
 
     elif args.dot or args.png:
-      ast, dot = gen_ast(source)
-      base = fname.split('.')[0]
-
-      if args.dot:
-        fdot = base + '.dot'
-        print(f'print ast: {fdot}')
-        with open(fdot, 'w') as f:
-          with redirect_stdout(f):
-            print(dot)
-
-      elif args.png:
-        pass
+      ast = gen_ast(source)
+      print(ast)
+      
+    elif args.sym:
+      env = context.check()
+      print_symbol_table(env)
+    
 
     else:
       context.parse(source)

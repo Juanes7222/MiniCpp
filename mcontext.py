@@ -32,6 +32,12 @@ class Context:
         self.have_errors = False
         self.source = source
         self.ast = self.parser.parse(self.lexer.tokenize(self.source))
+        
+    def check(self):
+        if self.source:
+            return Checker.check(self.ast, ChainMap(), self)
+        else:
+            return ChainMap()
     
     def run(self):
         if not self.have_errors:
@@ -92,8 +98,7 @@ def extract_symbol_info(name, info):
         return info.type_, 'variable'
     elif isinstance(info, StaticVarDeclStmt):
         return info.type_, 'variable estática'
-    elif isinstance(info, ArrayDeclStmt):
-        return f"array<{info.type_}>", 'Array'
+
     elif isinstance(info, NewArrayExpr):
         return f"array<{info.type_}>", 'Array'
     elif isinstance(info, ClassType):

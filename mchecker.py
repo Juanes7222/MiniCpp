@@ -1,20 +1,3 @@
-# checker.py
-'''
-Analisis Semantico
-------------------
-
-En esta etapa del compilador debemos hacer lo siguiente:
-
-1. Construir la tabla de Símbolos (puede usar ChainMap).
-2. Validar que todo Identificador debe ser declarado previamente.
-3. Agregar una instrucción de cast.
-4. Validar que cualquier expresión debe tener compatibilidad de tipos.
-5. Validar que exista una función main (puerta de entrada).
-6. Implementar la función scanf.
-7. Implementar la instrucción FOR.
-8. Validar que las instrucciones BREAK y CONTINUE estén utilizada dentro de instrucciones WHILE/FOR.
-'''
-import re
 
 from collections import ChainMap  # Tabla de Simbolos
 from typing import Union
@@ -255,14 +238,12 @@ class Checker(Visitor):
             raise CheckError(f"Arreglo '{n.ident}' no está definido")
 
         array_type = env[n.ident]
-        if not array_type.startswith('array'):
-            raise CheckError(f"'{n.ident}' no es un arreglo")
 
         index_type = n.index.accept(self, env, interp)
         if index_type != 'int':
             raise CheckError(f"El índice del arreglo '{n.ident}' debe ser de tipo entero, pero es '{index_type}'")
 
-        element_type = array_type[6:-1]  # Por ejemplo, 'array<int>' -> 'int'
+        element_type = array_type.type_  # Por ejemplo, 'array<int>' -> 'int'
         return element_type
 
     def visit(self, n: NewArrayExpr, env: ChainMap, interp):
@@ -287,6 +268,34 @@ class Checker(Visitor):
             value_type = list(value_type)[0]
             if value_type != n.type_:
                 raise CheckError(f"El valor inicial del arreglo '{n.ident}' no es compatible con el tipo '{n.type_}'")
+            
+    def visit(self, n: ArrayAssignmentExpr, env: ChainMap, interp):
+        """
+        Valida la asignación a un elemento de un arreglo.
+        """
+        # Verificar que el arreglo existe
+        if n.array not in env:
+            raise CheckError(f"El arreglo '{n.array}' no está definido")
+
+        # Verificar que es un arreglo
+        array_info = env[n.array]
+        if not isinstance(array_info, NewArrayExpr):
+            raise CheckError(f"'{n.array}' no es un arreglo válido")
+
+        # Verificar el índice
+        index_type = n.index.accept(self, env, interp)
+        if index_type != 'int':
+            raise CheckError(f"El índice del arreglo '{n.array}' debe ser de tipo entero, pero se encontró '{index_type}'")
+
+        # Verificar el valor asignado
+        value_type = n.expr.accept(self, env, interp)
+        element_type = array_info.type_
+        if not self.check_type_compatibility(element_type, value_type):
+            raise CheckError(
+                f"Incompatibilidad de tipos: no se puede asignar un valor de tipo '{value_type}' "
+                f"a un elemento del arreglo '{n.array}' de tipo '{element_type}'"
+            )
+
 
     def visit(self, n: ArraySizeExpr, env: ChainMap, interp):
         if n.array not in env:
